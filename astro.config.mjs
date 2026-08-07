@@ -3,7 +3,7 @@ import { unified } from '@astrojs/markdown-remark';
 import remarkDataDeleted from './src/plugins/remark-data-deleted.mjs';
 
 export default defineConfig({
-  site: 'https://Hikari16665.github.io',
+  site: 'https://ab.hikari.bond',
   output: 'static',
   vite: {
     build: {
