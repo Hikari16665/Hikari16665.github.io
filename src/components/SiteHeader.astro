@@ -1,0 +1,24 @@
+---
+import { site } from '../config/site';
+import ThemeToggle from './ThemeToggle.astro';
+---
+
+<header class="site-header">
+  <div class="container inner">
+    <a class="brand" href="/">{site.title}</a>
+    <nav aria-label="主导航">
+      {site.navigation.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+    <ThemeToggle />
+  </div>
+</header>
+
+<style>
+  .site-header { position: sticky; z-index: 10; top: 0; padding-block: var(--space-4); backdrop-filter: blur(18px); }
+  .inner { display: flex; align-items: center; gap: var(--space-6); }
+  .brand { margin-right: auto; font-weight: 760; letter-spacing: -0.03em; }
+  nav { display: flex; gap: var(--space-6); color: var(--color-muted); }
+  nav a:hover { color: var(--color-text); }
+  @media (max-width: 38rem) { nav { display: none; } }
+</style>
+

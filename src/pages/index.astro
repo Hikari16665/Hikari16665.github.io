@@ -1,0 +1,161 @@
+---
+import { getCollection } from 'astro:content';
+import HolographicRelic from '../components/HolographicRelic.astro';
+import PostCard from '../components/PostCard.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout>
+  <section class="hero" aria-labelledby="hero-title">
+    <HolographicRelic class="hero-relic" theme="auto" motionEnabled={true} quality="auto" />
+    <div class="hero-grid" aria-hidden="true"></div>
+    <div class="hero-haze" aria-hidden="true"></div>
+    <div class="hero-grain" aria-hidden="true"></div>
+    <div class="hero-focus-mask" aria-hidden="true"></div>
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow"><span>HIKARIAWAKEN</span></p>
+        <h1 id="hero-title" style="font-size: 4.5rem;">思考随笔站</h1>
+        <p class="lead">感受生长，感受联结</p>
+        <p class="lead">[Moving forward until the appointed time]</p>
+      </div>
+      <div class="relic-caption" aria-hidden="true">
+        <span>SPECIMEN / 001</span>
+        <span>UTILITY RELIC</span>
+      </div>
+      <a class="scroll-cue" href="#latest" aria-label="前往最近更新">
+        <span>向下探索</span>
+        <i aria-hidden="true"></i>
+      </a>
+    </div>
+  </section>
+  <section class="latest" id="latest">
+    <div class="container latest-inner">
+    <div class="section-title"><h2>最近更新</h2><a href="/blog">查看全部 →</a></div>
+    <div class="grid">{posts.map((post) => <PostCard title={post.data.title} description={post.data.description} date={post.data.publishedAt} tags={post.data.tags} href={`/blog/${post.id}/`} />)}</div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: var(--hero-height);
+    isolation: isolate;
+    overflow: clip;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .hero :global(.hero-relic) { z-index: -5; }
+
+  .hero-grid,
+  .hero-haze,
+  .hero-grain,
+  .hero-focus-mask {
+    position: absolute;
+    inset: 0;
+    z-index: -4;
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(var(--hologram-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hologram-grid) 1px, transparent 1px);
+    background-size: 5rem 5rem;
+    mask-image: linear-gradient(to bottom, transparent 8%, black 42%, transparent 93%);
+    opacity: 0.35;
+  }
+
+  .hero-haze {
+    background:
+      radial-gradient(circle at 78% 44%, color-mix(in srgb, var(--hologram-color) 10%, transparent), transparent 28%),
+      linear-gradient(to bottom, var(--color-bg) 0%, transparent 18%, transparent 70%, var(--color-bg) 98%);
+    z-index: -3;
+  }
+
+  .hero-focus-mask {
+    z-index: -2;
+    background: radial-gradient(ellipse 58% 48% at 26% 52%, var(--hero-mask) 0 34%, color-mix(in srgb, var(--hero-mask) 78%, transparent) 55%, transparent 78%);
+  }
+
+  .hero-grain {
+    z-index: -1;
+    opacity: 0.12;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+    mix-blend-mode: soft-light;
+  }
+
+  .hero-inner {
+    position: relative;
+    display: grid;
+    min-height: var(--hero-height);
+    align-items: center;
+    padding-block: clamp(7rem, 16vh, 11rem) clamp(6rem, 12vh, 9rem);
+  }
+
+  .hero-copy { position: relative; z-index: 2; width: min(100%, 58rem); }
+  .eyebrow { display: flex; gap: var(--space-4); color: var(--color-accent); font-size: 0.72rem; font-weight: 760; letter-spacing: 0.18em; }
+  .eyebrow span + span { color: var(--color-muted); }
+  h1 { max-width: 13ch; margin: var(--space-6) 0; font-size: clamp(3.4rem, 8.6vw, 7.6rem); line-height: 0.92; letter-spacing: -0.075em; text-wrap: balance; }
+  h1 em { color: var(--color-accent); font-family: var(--font-serif); font-weight: 500; text-shadow: 0 0 34px color-mix(in srgb, var(--hologram-color) 14%, transparent); }
+  .lead { max-width: 36rem; color: var(--color-muted); font-size: clamp(1rem, 1.7vw, 1.22rem); }
+
+  .relic-caption {
+    position: absolute;
+    right: 0;
+    bottom: 16%;
+    display: grid;
+    gap: 0.2rem;
+    color: color-mix(in srgb, var(--hologram-color) 70%, var(--color-muted));
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.17em;
+    text-align: right;
+  }
+
+  .relic-caption::before { content: ''; position: absolute; right: 0; bottom: calc(100% + .75rem); width: 5rem; height: 1px; background: currentColor; opacity: .45; }
+
+  .scroll-cue {
+    position: absolute;
+    bottom: var(--space-8);
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+  }
+
+  .scroll-cue i { position: relative; display: block; width: 2.75rem; height: 1px; overflow: hidden; background: var(--color-border); }
+  .scroll-cue i::after { content: ''; position: absolute; inset: 0; background: var(--hologram-color); animation: scan-line 2.2s var(--ease-out) infinite; transform: translateX(-100%); }
+
+  .latest { position: relative; padding-block: clamp(5rem, 10vw, 8rem); background: linear-gradient(to bottom, color-mix(in srgb, var(--hologram-fog) 32%, var(--color-bg)), var(--color-bg) 12rem); }
+  .latest::before { content: ''; position: absolute; top: -7rem; right: 4vw; width: min(32rem, 64vw); height: 12rem; background: radial-gradient(ellipse, color-mix(in srgb, var(--hologram-color) 9%, transparent), transparent 72%); filter: blur(20px); pointer-events: none; }
+  .latest-inner { position: relative; }
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; }
+  .section-title h2 { font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -0.045em; }
+  .section-title a { color: var(--color-accent); }
+  .grid { display: grid; gap: var(--space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+
+  @keyframes scan-line { 0% { transform: translateX(-100%); } 55%, 100% { transform: translateX(100%); } }
+
+  @media (max-width: 720px) {
+    .hero-focus-mask { background: radial-gradient(ellipse 92% 46% at 40% 48%, var(--hero-mask) 0 42%, color-mix(in srgb, var(--hero-mask) 72%, transparent) 68%, transparent 100%); }
+    .hero-grid { background-size: 3.5rem 3.5rem; opacity: .24; }
+    .hero-inner { align-items: end; padding-bottom: 8rem; }
+    h1 { font-size: clamp(3.1rem, 17vw, 5.4rem); }
+    .lead { max-width: 30rem; }
+    .relic-caption { top: 20%; bottom: auto; right: var(--space-2); }
+    .scroll-cue { left: var(--space-1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-cue i::after { animation: none; transform: translateX(0); opacity: .55; }
+  }
+</style>

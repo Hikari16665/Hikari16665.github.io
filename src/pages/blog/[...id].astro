@@ -1,0 +1,39 @@
+---
+import { getCollection, render } from 'astro:content';
+import PostLayout from '../../layouts/PostLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('blog', ({ data }) => !data.draft))
+    .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+  return posts.map((post, index) => ({
+    params: { id: post.id },
+    props: {
+      post,
+      previous: posts[index + 1] ? { id: posts[index + 1].id, title: posts[index + 1].data.title } : undefined,
+      next: posts[index - 1] ? { id: posts[index - 1].id, title: posts[index - 1].data.title } : undefined,
+    },
+  }));
+}
+
+const { post, previous, next } = Astro.props;
+const { Content, headings } = await render(post);
+const plainText = (post.body ?? '')
+  .replace(/```[\s\S]*?```/g, ' ')
+  .replace(/<[^>]+>|[#>*_`\[\]()-]/g, ' ');
+const wordCount = (plainText.match(/[\u3400-\u9fff]|[a-zA-Z0-9]+/g) ?? []).length;
+const readingMinutes = Math.max(1, Math.ceil(wordCount / 400));
+---
+<PostLayout
+  title={post.data.title}
+  description={post.data.description}
+  publishedAt={post.data.publishedAt}
+  tags={post.data.tags}
+  archiveId={post.id}
+  headings={headings}
+  wordCount={wordCount}
+  readingMinutes={readingMinutes}
+  previous={previous}
+  next={next}
+>
+  <Content />
+</PostLayout>

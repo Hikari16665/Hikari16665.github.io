@@ -1,0 +1,401 @@
+<canvas
+  class="click-fracture"
+  data-click-fracture
+  transition:persist="click-fracture"
+  aria-hidden="true"
+></canvas>
+
+<script>
+  type Shard = {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    rotation: number;
+    spin: number;
+    size: number;
+    stretch: number;
+    life: number;
+    maxLife: number;
+    color: string;
+    filled: boolean;
+  };
+
+  type Ray = {
+    x: number;
+    y: number;
+    angle: number;
+    length: number;
+    life: number;
+    maxLife: number;
+    color: string;
+  };
+
+  type TrailPoint = {
+    x: number;
+    y: number;
+    life: number;
+    maxLife: number;
+    color: string;
+  };
+
+  type TrailColumn = {
+    x: number;
+    y: number;
+    seed: number;
+    life: number;
+    maxLife: number;
+    color: string;
+  };
+
+  const setupClickFracture = () => {
+    const canvas = document.querySelector<HTMLCanvasElement>('[data-click-fracture]');
+    if (!canvas || canvas.dataset.ready === 'true') return;
+    canvas.dataset.ready = 'true';
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const compact = window.matchMedia('(max-width: 720px)');
+    const shards: Shard[] = [];
+    const rays: Ray[] = [];
+    const trail: TrailPoint[] = [];
+    const columns: TrailColumn[] = [];
+    let frame = 0;
+    let lastTime = performance.now();
+    let pixelRatio = 1;
+    let dragging = false;
+    let dragPointerId = -1;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragDistance = 0;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let columnDistance = 0;
+    let lastMoveTime = 0;
+    let directionX = 0;
+    let directionY = 0;
+
+    const resize = () => {
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(window.innerWidth * pixelRatio);
+      canvas.height = Math.round(window.innerHeight * pixelRatio);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    };
+
+    const themeColors = () => {
+      const styles = getComputedStyle(document.documentElement);
+      return [
+        styles.getPropertyValue('--hologram-color').trim() || '#72e8ff',
+        styles.getPropertyValue('--color-accent').trim() || '#a59cff',
+        styles.getPropertyValue('--color-text').trim() || '#f1f0f7',
+      ];
+    };
+
+    const burst = (x: number, y: number) => {
+      if (reducedMotion.matches) return;
+      const colors = themeColors();
+      const shardCount = compact.matches ? 9 : 15;
+      const rayCount = compact.matches ? 4 : 7;
+
+      for (let index = 0; index < shardCount; index += 1) {
+        const angle = (Math.PI * 2 * index) / shardCount + (Math.random() - 0.5) * 0.48;
+        const speed = 95 + Math.random() * 230;
+        const maxLife = 0.42 + Math.random() * 0.38;
+        shards.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 30,
+          rotation: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 15,
+          size: 4 + Math.random() * 10,
+          stretch: 0.5 + Math.random() * 1.25,
+          life: maxLife,
+          maxLife,
+          color: colors[index % colors.length],
+          filled: index % 3 === 0,
+        });
+      }
+
+      for (let index = 0; index < rayCount; index += 1) {
+        const maxLife = 0.18 + Math.random() * 0.2;
+        rays.push({
+          x,
+          y,
+          angle: (Math.PI * 2 * index) / rayCount + (Math.random() - 0.5) * 0.32,
+          length: 18 + Math.random() * 34,
+          life: maxLife,
+          maxLife,
+          color: colors[index % colors.length],
+        });
+      }
+
+      if (shards.length > 72) shards.splice(0, shards.length - 72);
+      requestRender();
+    };
+
+    const requestRender = () => {
+      if (frame) return;
+      lastTime = performance.now();
+      frame = requestAnimationFrame(render);
+    };
+
+    const addTrailPoint = (x: number, y: number, addColumn: boolean) => {
+      const colors = themeColors();
+      const maxLife = 0.52;
+      trail.push({ x, y, life: maxLife, maxLife, color: colors[1] ?? colors[0] ?? '#a59cff' });
+      if (addColumn) {
+        const columnLife = 0.72;
+        columns.push({
+          x,
+          y,
+          seed: Math.random() * 420,
+          life: columnLife,
+          maxLife: columnLife,
+          color: colors[Math.floor(Math.random() * colors.length)] ?? '#72e8ff',
+        });
+      }
+      if (trail.length > 110) trail.splice(0, trail.length - 110);
+      if (columns.length > 58) columns.splice(0, columns.length - 58);
+      requestRender();
+    };
+
+    const drawShard = (shard: Shard) => {
+      const progress = 1 - shard.life / shard.maxLife;
+      const alpha = Math.max(0, 1 - progress * progress);
+      context.save();
+      context.translate(shard.x, shard.y);
+      context.rotate(shard.rotation);
+      context.scale(1, shard.stretch);
+      context.beginPath();
+      context.moveTo(shard.size, 0);
+      context.lineTo(-shard.size * 0.7, shard.size * 0.52);
+      context.lineTo(-shard.size * 0.22, -shard.size * 0.68);
+      context.closePath();
+      context.globalAlpha = alpha * (shard.filled ? 0.34 : 0.86);
+      context.strokeStyle = shard.color;
+      context.fillStyle = shard.color;
+      context.lineWidth = 1;
+      if (shard.filled) context.fill();
+      context.stroke();
+      context.restore();
+    };
+
+    const drawRay = (ray: Ray) => {
+      const progress = 1 - ray.life / ray.maxLife;
+      const distance = ray.length * progress;
+      const start = Math.max(0, distance - ray.length * 0.62);
+      context.save();
+      context.globalAlpha = Math.max(0, 1 - progress) * 0.78;
+      context.strokeStyle = ray.color;
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(ray.x + Math.cos(ray.angle) * start, ray.y + Math.sin(ray.angle) * start);
+      context.lineTo(ray.x + Math.cos(ray.angle) * distance, ray.y + Math.sin(ray.angle) * distance);
+      context.stroke();
+      context.restore();
+    };
+
+    const drawColumn = (column: TrailColumn, now: number) => {
+      const lifeRatio = Math.max(0, column.life / column.maxLife);
+      const gap = 14;
+      const alpha = Math.min(1, lifeRatio * 1.8) * 0.42;
+      context.save();
+      context.strokeStyle = column.color;
+      context.lineWidth = 0.75;
+      context.globalAlpha = alpha;
+      context.setLineDash([28, 17]);
+      context.lineDashOffset = -(now * 0.045 + column.seed);
+      context.beginPath();
+      context.moveTo(column.x, column.y - gap);
+      context.lineTo(column.x, 0);
+      context.moveTo(column.x, column.y + gap);
+      context.lineTo(column.x, window.innerHeight);
+      context.stroke();
+
+      context.setLineDash([]);
+      context.lineWidth = 1.5;
+      context.globalAlpha = Math.min(1, lifeRatio * 2.2) * 0.86;
+      const upperSpan = Math.max(column.y - gap, 1);
+      const lowerSpan = Math.max(window.innerHeight - column.y - gap, 1);
+      const upperTravel = (now * 0.24 + column.seed) % (upperSpan + 52);
+      const lowerTravel = (now * 0.24 + column.seed * 1.37) % (lowerSpan + 52);
+      const upperY = column.y - gap - upperTravel;
+      const lowerY = column.y + gap + lowerTravel;
+      const glow = context.createLinearGradient(column.x, upperY - 48, column.x, upperY + 48);
+      glow.addColorStop(0, 'transparent');
+      glow.addColorStop(0.5, column.color);
+      glow.addColorStop(1, 'transparent');
+      context.strokeStyle = glow;
+      context.beginPath();
+      context.moveTo(column.x, Math.max(0, upperY - 48));
+      context.lineTo(column.x, Math.min(column.y - gap, upperY + 48));
+      context.stroke();
+      const lowerGlow = context.createLinearGradient(column.x, lowerY - 48, column.x, lowerY + 48);
+      lowerGlow.addColorStop(0, 'transparent');
+      lowerGlow.addColorStop(0.5, column.color);
+      lowerGlow.addColorStop(1, 'transparent');
+      context.strokeStyle = lowerGlow;
+      context.beginPath();
+      context.moveTo(column.x, Math.max(column.y + gap, lowerY - 48));
+      context.lineTo(column.x, Math.min(window.innerHeight, lowerY + 48));
+      context.stroke();
+      context.restore();
+    };
+
+    const drawTrail = () => {
+      for (let index = 1; index < trail.length; index += 1) {
+        const previous = trail[index - 1];
+        const point = trail[index];
+        if (!previous || !point) continue;
+        const alpha = Math.min(previous.life / previous.maxLife, point.life / point.maxLife);
+        context.save();
+        context.globalAlpha = Math.max(0, alpha) * 0.82;
+        context.strokeStyle = point.color;
+        context.lineWidth = 2;
+        context.lineCap = 'round';
+        context.shadowColor = point.color;
+        context.shadowBlur = 8;
+        context.beginPath();
+        context.moveTo(previous.x, previous.y);
+        context.lineTo(point.x, point.y);
+        context.stroke();
+        context.restore();
+      }
+    };
+
+    const render = (now: number) => {
+      const delta = Math.min((now - lastTime) / 1000, 0.034);
+      lastTime = now;
+      context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      for (let index = columns.length - 1; index >= 0; index -= 1) {
+        const column = columns[index];
+        if (!column) continue;
+        column.life -= delta;
+        if (column.life <= 0) {
+          columns.splice(index, 1);
+          continue;
+        }
+        drawColumn(column, now);
+      }
+
+      for (let index = trail.length - 1; index >= 0; index -= 1) {
+        const point = trail[index];
+        if (!point) continue;
+        point.life -= delta;
+        if (point.life <= 0) trail.splice(index, 1);
+      }
+      drawTrail();
+
+      for (let index = shards.length - 1; index >= 0; index -= 1) {
+        const shard = shards[index];
+        if (!shard) continue;
+        shard.life -= delta;
+        if (shard.life <= 0) {
+          shards.splice(index, 1);
+          continue;
+        }
+        shard.vy += 360 * delta;
+        shard.vx *= Math.pow(0.965, delta * 60);
+        shard.x += shard.vx * delta;
+        shard.y += shard.vy * delta;
+        shard.rotation += shard.spin * delta;
+        drawShard(shard);
+      }
+
+      for (let index = rays.length - 1; index >= 0; index -= 1) {
+        const ray = rays[index];
+        if (!ray) continue;
+        ray.life -= delta;
+        if (ray.life <= 0) {
+          rays.splice(index, 1);
+          continue;
+        }
+        drawRay(ray);
+      }
+
+      if (shards.length || rays.length || trail.length || columns.length || dragging) frame = requestAnimationFrame(render);
+      else {
+        frame = 0;
+        context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      }
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0 || event.pointerType === 'touch') return;
+      dragging = true;
+      dragPointerId = event.pointerId;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      lastDragX = event.clientX;
+      lastDragY = event.clientY;
+      dragDistance = 0;
+      columnDistance = 0;
+      lastMoveTime = performance.now();
+      directionX = 0;
+      directionY = 0;
+      addTrailPoint(event.clientX, event.clientY, true);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!dragging || event.pointerId !== dragPointerId || (event.buttons & 1) !== 1) return;
+      const distance = Math.hypot(event.clientX - lastDragX, event.clientY - lastDragY);
+      if (distance < 2) return;
+      const now = performance.now();
+      const nextDirectionX = (event.clientX - lastDragX) / distance;
+      const nextDirectionY = (event.clientY - lastDragY) / distance;
+      const pausedBeforeTurn = now - lastMoveTime >= 40 && dragDistance >= 12;
+      const hasDirection = Math.hypot(directionX, directionY) > 0.5;
+      if (pausedBeforeTurn && hasDirection) {
+        const directionDot = directionX * nextDirectionX + directionY * nextDirectionY;
+        if (directionDot < Math.cos((10 * Math.PI) / 180)) burst(lastDragX, lastDragY);
+      }
+      dragDistance += distance;
+      columnDistance += distance;
+      const addColumn = columnDistance >= (compact.matches ? 28 : 20);
+      if (addColumn) columnDistance = 0;
+      addTrailPoint(event.clientX, event.clientY, addColumn);
+      lastDragX = event.clientX;
+      lastDragY = event.clientY;
+      directionX = nextDirectionX;
+      directionY = nextDirectionY;
+      lastMoveTime = now;
+    };
+
+    const finishDrag = (event: PointerEvent, cancelled = false) => {
+      if (!dragging || event.pointerId !== dragPointerId) return;
+      dragging = false;
+      dragPointerId = -1;
+      if (!cancelled && dragDistance < 7) burst(dragStartX, dragStartY);
+    };
+
+    window.addEventListener('resize', resize, { passive: true });
+    document.addEventListener('pointerdown', onPointerDown, { passive: true });
+    document.addEventListener('pointermove', onPointerMove, { passive: true });
+    document.addEventListener('pointerup', (event) => finishDrag(event), { passive: true });
+    document.addEventListener('pointercancel', (event) => finishDrag(event, true), { passive: true });
+    resize();
+  };
+
+  setupClickFracture();
+  document.addEventListener('astro:page-load', setupClickFracture);
+</script>
+
+<style>
+  .click-fracture {
+    position: fixed;
+    z-index: 2147483645;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .click-fracture { display: none; }
+  }
+</style>

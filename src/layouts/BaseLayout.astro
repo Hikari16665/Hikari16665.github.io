@@ -1,0 +1,42 @@
+---
+import SiteHeader from '../components/SiteHeader.astro';
+import PageTransition from '../components/PageTransition.astro';
+import ClickFracture from '../components/ClickFracture.astro';
+import { ClientRouter } from 'astro:transitions';
+import { site } from '../config/site';
+import '../styles/global.css';
+
+interface Props { title?: string; description?: string; }
+const { title, description = site.description } = Astro.props;
+const pageTitle = title ? `${title} · ${site.title}` : site.title;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{pageTitle}</title>
+    <ClientRouter fallback="swap" />
+    <script is:inline>
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+    </script>
+  </head>
+  <body transition:animate="none">
+    <SiteHeader />
+    <main><slot /></main>
+    <ClickFracture />
+    <PageTransition />
+  </body>
+</html>
+
+<style is:global>
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+</style>

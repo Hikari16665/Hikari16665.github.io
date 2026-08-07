@@ -1,0 +1,14 @@
+---
+import { getCollection } from 'astro:content';
+import PostCard from '../../components/PostCard.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+---
+<BaseLayout title="文章">
+  <section class="container page">
+    <header><p>ARCHIVE</p><h1>所有文章</h1></header>
+    <div class="list">{posts.map((post) => <PostCard title={post.data.title} description={post.data.description} date={post.data.publishedAt} tags={post.data.tags} href={`/blog/${post.id}/`} />)}</div>
+  </section>
+</BaseLayout>
+<style>.page { padding-block: var(--space-12) var(--space-16); }.page header p { color: var(--color-accent); font-weight: 750; letter-spacing: .16em; }.page h1 { font-size: clamp(2.5rem, 7vw, 5rem); }.list { display: grid; gap: var(--space-6); }</style>
+

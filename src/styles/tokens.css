@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light dark;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Noto Serif SC", ui-serif, Georgia, serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+
+  --color-bg: #f7f7fb;
+  --color-surface: rgba(255, 255, 255, 0.78);
+  --color-text: #191923;
+  --color-muted: #68687a;
+  --color-border: rgba(25, 25, 35, 0.12);
+  --color-accent: #6157e8;
+  --color-accent-soft: #ebe9ff;
+  --hologram-color: #6558d9;
+  --hologram-secondary: #2f9bd3;
+  --hologram-fog: #e9e8f6;
+  --hologram-grid: rgba(97, 87, 232, 0.1);
+  --hero-mask: rgba(247, 247, 251, 0.94);
+  --hero-height: max(42rem, calc(100svh - 4.5rem));
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --shadow-soft: 0 16px 50px rgba(35, 31, 80, 0.08);
+  --content-width: 72rem;
+  --reading-width: 46rem;
+  --motion-fast: 160ms;
+  --motion-base: 280ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

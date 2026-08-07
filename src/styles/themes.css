@@ -1,0 +1,33 @@
+:root[data-theme='dark'] {
+  --color-bg: #111117;
+  --color-surface: rgba(29, 29, 40, 0.78);
+  --color-text: #f1f0f7;
+  --color-muted: #a8a6b5;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-accent: #a59cff;
+  --color-accent-soft: #28243f;
+  --hologram-color: #72e8ff;
+  --hologram-secondary: #a879ff;
+  --hologram-fog: #080b18;
+  --hologram-grid: rgba(114, 232, 255, 0.1);
+  --hero-mask: rgba(17, 17, 23, 0.93);
+  --shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #111117;
+    --color-surface: rgba(29, 29, 40, 0.78);
+    --color-text: #f1f0f7;
+    --color-muted: #a8a6b5;
+    --color-border: rgba(255, 255, 255, 0.12);
+    --color-accent: #a59cff;
+    --color-accent-soft: #28243f;
+    --hologram-color: #72e8ff;
+    --hologram-secondary: #a879ff;
+    --hologram-fog: #080b18;
+    --hologram-grid: rgba(114, 232, 255, 0.1);
+    --hero-mask: rgba(17, 17, 23, 0.93);
+    --shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.28);
+  }
+}

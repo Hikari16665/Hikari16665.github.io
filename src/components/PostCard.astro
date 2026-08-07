@@ -1,0 +1,30 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  href: string;
+  date: Date;
+  tags?: string[];
+}
+const { title, description, href, date, tags = [] } = Astro.props;
+---
+
+<article class="card">
+  <div class="meta">
+    <time datetime={date.toISOString()}>{date.toLocaleDateString('zh-CN')}</time>
+    {tags.map((tag) => <span>#{tag}</span>)}
+  </div>
+  <h2><a href={href}>{title}</a></h2>
+  <p>{description}</p>
+  <a class="more" href={href} aria-label={`阅读《${title}》`}>继续阅读 →</a>
+</article>
+
+<style>
+  .card { padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-soft); transition: transform var(--motion-base) var(--ease-out); }
+  .card:hover { transform: translateY(-3px); }
+  .meta { display: flex; flex-wrap: wrap; gap: var(--space-3); color: var(--color-muted); font-size: 0.875rem; }
+  h2 { margin: var(--space-3) 0; line-height: 1.25; letter-spacing: -0.025em; }
+  p { color: var(--color-muted); }
+  .more { color: var(--color-accent); font-weight: 650; }
+</style>
+

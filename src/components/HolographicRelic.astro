@@ -1,0 +1,531 @@
+---
+interface Props {
+  theme?: 'auto' | 'light' | 'dark';
+  motionEnabled?: boolean;
+  quality?: 'auto' | 'low' | 'high';
+  mode?: 'relic' | 'signals';
+  class?: string;
+}
+
+const {
+  theme = 'auto',
+  motionEnabled = true,
+  quality = 'auto',
+  mode = 'relic',
+  class: className = '',
+} = Astro.props;
+---
+
+<div
+  class:list={['hologram-relic', className]}
+  data-hologram-scene
+  data-theme-mode={theme}
+  data-motion={motionEnabled ? 'on' : 'off'}
+  data-quality={quality}
+  data-mode={mode}
+  aria-hidden="true"
+>
+  <canvas class="hologram-canvas" tabindex="-1"></canvas>
+  <div class="hologram-fallback">
+    <svg viewBox="0 0 900 720" role="presentation">
+      <g class="fallback-relic" fill="none" vector-effect="non-scaling-stroke">
+        <path d="M588 90 560 630M710 158 692 610M480 238h224M622 300h166" />
+        <path d="M493 238c42-54 92-54 142 0s98 54 147 0M614 300c36-44 78-44 118 0" />
+        <path d="M515 223v30m38-30v30m118 62v30m36-30v30" />
+        <ellipse cx="515" cy="258" rx="10" ry="4" />
+        <ellipse cx="553" cy="258" rx="10" ry="4" />
+        <ellipse cx="671" cy="350" rx="9" ry="4" />
+        <ellipse cx="707" cy="350" rx="9" ry="4" />
+      </g>
+    </svg>
+  </div>
+</div>
+
+<script>
+  import {
+    ACESFilmicToneMapping,
+    AdditiveBlending,
+    BoxGeometry,
+    CatmullRomCurve3,
+    Color,
+    CylinderGeometry,
+    DoubleSide,
+    FogExp2,
+    Group,
+    MathUtils,
+    Mesh,
+    PerspectiveCamera,
+    Scene,
+    ShaderMaterial,
+    SRGBColorSpace,
+    TorusGeometry,
+    TubeGeometry,
+    Vector2,
+    Vector3,
+    WebGLRenderer,
+    type BufferGeometry,
+  } from 'three';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+  type SceneState = {
+    isDark: boolean;
+    visible: boolean;
+    pageVisible: boolean;
+    contextLost: boolean;
+  };
+
+  const vertexShader = /* glsl */ `
+    uniform float uTime;
+    uniform float uMotion;
+    varying vec3 vNormal;
+    varying vec3 vWorldPosition;
+    varying vec3 vViewDirection;
+
+    void main() {
+      vec3 displaced = position;
+      float ripple = sin(position.y * 2.4 + uTime * 0.7) * 0.008;
+      displaced += normal * ripple * uMotion;
+      vec4 world = modelMatrix * vec4(displaced, 1.0);
+      vec4 view = viewMatrix * world;
+      vNormal = normalize(mat3(modelMatrix) * normal);
+      vWorldPosition = world.xyz;
+      vViewDirection = normalize(cameraPosition - world.xyz);
+      gl_Position = projectionMatrix * view;
+    }
+  `;
+
+  const fragmentShader = /* glsl */ `
+    uniform float uTime;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    uniform float uScanStrength;
+    varying vec3 vNormal;
+    varying vec3 vWorldPosition;
+    varying vec3 vViewDirection;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+
+    void main() {
+      float fresnel = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewDirection))), 2.0);
+      float scan = smoothstep(0.72, 1.0, sin(vWorldPosition.y * 8.0 - uTime * 1.5) * 0.5 + 0.5);
+      float pulse = 0.72 + sin(uTime * 0.55 + vWorldPosition.y) * 0.12;
+      float grain = hash(gl_FragCoord.xy + floor(uTime * 8.0)) * 0.08;
+      float alpha = (0.42 + fresnel * 0.48 + scan * uScanStrength + grain) * uOpacity;
+      vec3 color = uColor * (pulse + fresnel * 0.8 + scan * 0.9);
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  const signalVertexShader = /* glsl */ `
+    varying vec2 vUv;
+    varying float vWorldX;
+
+    void main() {
+      vUv = uv;
+      vec4 world = modelMatrix * vec4(position, 1.0);
+      vWorldX = world.x;
+      gl_Position = projectionMatrix * viewMatrix * world;
+    }
+  `;
+
+  const signalFragmentShader = /* glsl */ `
+    uniform float uTime;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    varying float vWorldX;
+
+    void main() {
+      float phase = fract(vUv.y - uTime * 0.36 + vWorldX * 0.093);
+      float head = smoothstep(0.70, 0.84, phase) * (1.0 - smoothstep(0.84, 0.98, phase));
+      float tail = smoothstep(0.42, 0.82, phase) * (1.0 - smoothstep(0.82, 0.9, phase));
+      float endFade = smoothstep(0.0, 0.08, vUv.y) * (1.0 - smoothstep(0.92, 1.0, vUv.y));
+      float alpha = (0.055 + head * 0.68 + tail * 0.16) * endFade * uOpacity;
+      vec3 color = uColor * (0.72 + head * 1.25);
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  const setupHolograms = () => document.querySelectorAll<HTMLElement>('[data-hologram-scene]').forEach((root) => {
+    if (root.dataset.ready === 'true') return;
+    root.dataset.ready = 'true';
+
+    const canvas = root.querySelector<HTMLCanvasElement>('canvas');
+    if (!canvas) return;
+
+    const qualitySetting = root.dataset.quality ?? 'auto';
+    const signalsOnly = root.dataset.mode === 'signals';
+    const mobile = window.matchMedia('(max-width: 720px)').matches;
+    const lowQuality = qualitySetting === 'low' || (qualitySetting === 'auto' && mobile);
+    const allowMotion = root.dataset.motion !== 'off' && !prefersReducedMotion.matches;
+    const state: SceneState = {
+      isDark: false,
+      visible: true,
+      pageVisible: !document.hidden,
+      contextLost: false,
+    };
+
+    let renderer: WebGLRenderer;
+    try {
+      renderer = new WebGLRenderer({ canvas, alpha: true, antialias: !lowQuality, powerPreference: 'high-performance' });
+    } catch {
+      root.dataset.fallback = 'true';
+      return;
+    }
+
+    root.dataset.webgl = 'true';
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowQuality ? 1 : 1.5));
+    renderer.outputColorSpace = SRGBColorSpace;
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    const scene = new Scene();
+    scene.fog = new FogExp2(0xe9e8f6, lowQuality ? 0.045 : 0.035);
+    const camera = new PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(0.5, 0.45, 9.2);
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uMotion: { value: allowMotion ? 1 : 0 },
+      uColor: { value: new Color(0x6d63ff) },
+      uOpacity: { value: 0.58 },
+      uScanStrength: { value: 0.34 },
+    };
+    const material = new ShaderMaterial({
+      uniforms,
+      vertexShader,
+      fragmentShader,
+      wireframe: true,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+    });
+    const signalMaterial = new ShaderMaterial({
+      uniforms: {
+        uTime: uniforms.uTime,
+        uColor: uniforms.uColor,
+        uOpacity: uniforms.uOpacity,
+      },
+      vertexShader: signalVertexShader,
+      fragmentShader: signalFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: DoubleSide,
+    });
+
+    const relic = new Group();
+    const relics = new Group();
+    const signalField = new Group();
+    relics.add(relic);
+    relics.add(signalField);
+    scene.add(relics);
+    relic.visible = !signalsOnly;
+
+    const addMesh = (geometry: BufferGeometry, position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]) => {
+      const mesh = new Mesh(geometry, material);
+      mesh.position.set(...position);
+      mesh.rotation.set(...rotation);
+      relic.add(mesh);
+      return mesh;
+    };
+
+    const poleGeometry = new CylinderGeometry(0.15, 0.23, 6.8, lowQuality ? 5 : 8, lowQuality ? 5 : 10);
+    addMesh(poleGeometry, [1.15, -0.3, 0], [0, 0, -0.055]);
+    addMesh(new BoxGeometry(4.2, 0.16, 0.2, lowQuality ? 2 : 8, 1, 1), [0.95, 1.65, 0]);
+    addMesh(new BoxGeometry(2.5, 0.12, 0.15, lowQuality ? 2 : 6, 1, 1), [1.4, 0.75, 0.05]);
+    addMesh(new BoxGeometry(0.08, 1.05, 0.08), [-0.68, 1.28, 0]);
+    addMesh(new BoxGeometry(0.08, 1.05, 0.08), [2.55, 1.28, 0]);
+
+    const insulatorGeometry = new TorusGeometry(0.14, 0.035, 5, lowQuality ? 8 : 14);
+    [-0.68, 0.2, 1.65, 2.55].forEach((x, index) => {
+      for (let ring = 0; ring < (lowQuality ? 2 : 3); ring += 1) {
+        addMesh(insulatorGeometry, [x, 0.95 - ring * 0.12 + (index % 2) * 0.9, 0], [Math.PI / 2, 0, 0]);
+      }
+    });
+
+    const createWire = (start: Vector3, end: Vector3, sag: number, z: number) => {
+      const curve = new CatmullRomCurve3([
+        start.clone().setZ(z),
+        new Vector3((start.x + end.x) * 0.5, Math.min(start.y, end.y) - sag, z - 0.08),
+        end.clone().setZ(z),
+      ]);
+      addMesh(new TubeGeometry(curve, lowQuality ? 12 : 28, 0.018, 4, false), [0, 0, 0]);
+    };
+
+    createWire(new Vector3(-0.68, 1.62, 0), new Vector3(-5.1, 1.2, 0), 1.1, 0.05);
+    createWire(new Vector3(0.2, 1.62, 0), new Vector3(-4.7, 2.2, 0), 1.3, -0.08);
+    createWire(new Vector3(1.65, 1.62, 0), new Vector3(5.6, 1.05, 0), 1.2, 0.03);
+    createWire(new Vector3(2.55, 1.62, 0), new Vector3(5.9, 2.3, 0), 1.05, -0.12);
+    createWire(new Vector3(0.2, 0.73, 0), new Vector3(-4.3, -0.2, 0), 0.7, 0.14);
+
+    if (!lowQuality && !signalsOnly) {
+      const echo = relic.clone();
+      echo.scale.setScalar(0.62);
+      echo.position.set(-3.6, -1.7, -3.5);
+      echo.rotation.y = 0.28;
+      relics.add(echo);
+    }
+
+    const signalGeometry = new BoxGeometry(0.022, 1, 0.022, 1, lowQuality ? 1 : 4, 1);
+    const signalSpecs = lowQuality
+      ? [
+          [-3.4, -0.6, -1.8, 4.8],
+          [-0.9, 0.1, 0.5, 5.6],
+          [2.5, -0.8, -1.2, 4.2],
+          [4.5, 0.3, -2.4, 6.4],
+        ]
+      : [
+          [-5.2, -0.6, -2.8, 5.2],
+          [-3.7, 0.4, 0.2, 6.8],
+          [-2.0, -1.1, -1.1, 4.6],
+          [-0.5, 0.2, 1.0, 7.2],
+          [1.4, -0.8, -2.0, 5.4],
+          [3.2, 0.5, 0.5, 6.5],
+          [4.8, -0.4, -1.4, 5.8],
+          [6.1, 0.1, -3.1, 7.6],
+        ];
+    signalSpecs.forEach(([x, y, z, length], index) => {
+      const signal = new Mesh(signalGeometry, signalMaterial);
+      signal.position.set(x, y, z);
+      signal.scale.set(index % 3 === 0 ? 1.45 : 1, length, index % 2 === 0 ? 1 : 1.3);
+      signalField.add(signal);
+    });
+
+    relic.position.set(mobile ? 1.05 : 2.4, -0.05, -0.4);
+    relic.rotation.set(-0.04, -0.18, 0.02);
+    relic.scale.setScalar(mobile ? 0.76 : 1);
+
+    const renderPass = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(new Vector2(1, 1), lowQuality ? 0.28 : 0.48, 0.65, 0.26);
+    const alphaPass = new ShaderPass({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+        void main() {
+          vec4 color = texture2D(tDiffuse, vUv);
+          float alpha = clamp(max(max(color.r, color.g), color.b) * 1.35, 0.0, 1.0);
+          gl_FragColor = vec4(color.rgb, alpha);
+        }
+      `,
+    });
+    alphaPass.material.transparent = true;
+    const composer = new EffectComposer(renderer);
+    composer.addPass(renderPass);
+    composer.addPass(bloomPass);
+    composer.addPass(alphaPass);
+
+    const pointer = new Vector2();
+    const pointerTarget = new Vector2();
+    let scrollProgress = 0;
+    let frame = 0;
+    let lastTime = performance.now();
+
+    const resolveDarkTheme = () => {
+      const forced = root.dataset.themeMode;
+      if (forced === 'dark') return true;
+      if (forced === 'light') return false;
+      const documentTheme = document.documentElement.dataset.theme;
+      return documentTheme ? documentTheme === 'dark' : systemDark.matches;
+    };
+
+    const applyTheme = (immediate = false) => {
+      state.isDark = resolveDarkTheme();
+      const targetColor = new Color(state.isDark ? 0x72e8ff : 0x6558d9);
+      const fogColor = new Color(state.isDark ? 0x080b18 : 0xe9e8f6);
+      if (immediate) {
+        uniforms.uColor.value.copy(targetColor);
+        scene.fog?.color.copy(fogColor);
+      } else {
+        uniforms.uColor.value.lerp(targetColor, 0.16);
+        scene.fog?.color.lerp(fogColor, 0.16);
+      }
+      uniforms.uOpacity.value = state.isDark ? 0.72 : 0.5;
+      bloomPass.strength = state.isDark ? (lowQuality ? 0.34 : 0.56) : (lowQuality ? 0.2 : 0.36);
+    };
+
+    const resize = () => {
+      const width = root.clientWidth;
+      const height = root.clientHeight;
+      if (!width || !height) return;
+      renderer.setSize(width, height, false);
+      composer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+
+    const updateScroll = () => {
+      const rect = root.getBoundingClientRect();
+      scrollProgress = MathUtils.clamp(-rect.top / Math.max(rect.height, 1), 0, 1);
+      requestRender();
+    };
+
+    const render = (now: number) => {
+      frame = 0;
+      if (state.contextLost || !state.visible || !state.pageVisible) return;
+      const delta = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      if (allowMotion) {
+        uniforms.uTime.value += delta;
+        pointer.lerp(pointerTarget, 0.035);
+        relics.rotation.y = pointer.x * 0.08 - scrollProgress * 0.16;
+        relics.rotation.x = pointer.y * 0.045;
+        relics.position.y = Math.sin(uniforms.uTime.value * 0.38) * 0.08 - scrollProgress * 1.2;
+        camera.position.x = 0.5 + pointer.x * 0.18;
+        camera.position.y = 0.45 + pointer.y * 0.1;
+      }
+      applyTheme();
+      uniforms.uOpacity.value = (state.isDark ? 0.72 : 0.5) * (1 - scrollProgress * 0.72);
+      composer.render();
+      if (allowMotion) frame = requestAnimationFrame(render);
+    };
+
+    const requestRender = () => {
+      if (frame || state.contextLost || !state.visible || !state.pageVisible) return;
+      frame = requestAnimationFrame(render);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!allowMotion) return;
+      pointerTarget.set(event.clientX / window.innerWidth - 0.5, event.clientY / window.innerHeight - 0.5);
+    };
+
+    const themeObserver = new MutationObserver(() => {
+      applyTheme(true);
+      requestRender();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      state.visible = entry?.isIntersecting ?? false;
+      if (state.visible) requestRender();
+      else if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    }, { threshold: 0.01 });
+    visibilityObserver.observe(root);
+
+    const onVisibilityChange = () => {
+      state.pageVisible = !document.hidden;
+      if (state.pageVisible) requestRender();
+    };
+
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      state.contextLost = true;
+      root.dataset.fallback = 'true';
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+    });
+    canvas.addEventListener('webglcontextrestored', () => window.location.reload());
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('scroll', updateScroll, { passive: true });
+    window.addEventListener('resize', resize, { passive: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const onSystemThemeChange = () => {
+      applyTheme(true);
+      requestRender();
+    };
+    systemDark.addEventListener('change', onSystemThemeChange);
+
+    const cleanup = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      visibilityObserver.disconnect();
+      themeObserver.disconnect();
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('scroll', updateScroll);
+      window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      systemDark.removeEventListener('change', onSystemThemeChange);
+      relics.traverse((object) => {
+        if (object instanceof Mesh) object.geometry.dispose();
+      });
+      material.dispose();
+      signalMaterial.dispose();
+      composer.dispose();
+      renderer.dispose();
+    };
+    document.addEventListener('astro:before-swap', cleanup, { once: true });
+
+    resize();
+    updateScroll();
+    applyTheme(true);
+    requestRender();
+  });
+
+  setupHolograms();
+  document.addEventListener('astro:page-load', setupHolograms);
+</script>
+
+<style>
+  .hologram-relic {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .hologram-canvas,
+  .hologram-fallback {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hologram-canvas {
+    display: block;
+    opacity: 0;
+    mix-blend-mode: screen;
+    transition: opacity 900ms var(--ease-out);
+  }
+
+  [data-webgl='true'] .hologram-canvas { opacity: 1; }
+  [data-webgl='true'] .hologram-fallback { opacity: 0; }
+  [data-fallback='true'] .hologram-canvas { display: none; }
+  [data-fallback='true'] .hologram-fallback { opacity: 1; }
+
+  .hologram-fallback {
+    display: grid;
+    place-items: center;
+    color: var(--hologram-color);
+    opacity: 0.54;
+    transition: opacity var(--motion-base);
+  }
+
+  .hologram-fallback svg {
+    width: min(92vw, 68rem);
+    transform: translate(18%, 2%) rotate(-2deg);
+    filter: drop-shadow(0 0 18px color-mix(in srgb, var(--hologram-color) 48%, transparent));
+  }
+
+  .fallback-relic {
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-dasharray: 8 6;
+  }
+
+  @media (max-width: 720px) {
+    .hologram-fallback svg { width: 130vw; transform: translate(22%, 2%) rotate(-2deg); }
+  }
+</style>

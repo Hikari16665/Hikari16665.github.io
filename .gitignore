@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+dist/
+.astro/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Local agent instructions are not part of the public website source.
+AGENTS.md
+CLAUDE.md
