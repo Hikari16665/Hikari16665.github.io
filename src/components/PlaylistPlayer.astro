@@ -431,9 +431,12 @@ const tracks = Object.entries(audioFiles)
     let previousBass = 0;
     let impact = 0;
     let lastImpactAt = 0;
+    let viewportMotionEnabled = !window.location.pathname.startsWith('/blog');
 
     const updatePageContext = () => {
       viewportStage = document.querySelector<HTMLElement>('[data-viewport-stage]');
+      viewportMotionEnabled = !window.location.pathname.startsWith('/blog');
+      if (!viewportMotionEnabled) resetViewport();
       if (!ambient) return;
       ambient.dataset.context = document.querySelector('[data-reading-page]') ? 'reading' : document.querySelector('.hero') ? 'hero' : 'page';
     };
@@ -476,7 +479,7 @@ const tracks = Object.entries(audioFiles)
     };
 
     const updateViewport = (bands: [number, number, number]) => {
-      if (!viewportStage || reducedMotion.matches) { resetViewport(); return; }
+      if (!viewportStage || !viewportMotionEnabled || reducedMotion.matches) { resetViewport(); return; }
       const [bass, mid, high] = bands;
       const energy = bass * .48 + mid * .34 + high * .18;
       const change = Math.abs(energy - previousEnergy);
