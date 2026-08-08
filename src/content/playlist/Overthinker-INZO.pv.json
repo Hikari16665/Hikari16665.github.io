@@ -29,11 +29,12 @@
     "pulse": ["self destructive", "disaster", "destroying", "survive"]
   },
   "scenes": {
-    "reverie": ["thinks all the time", "repetition of words", "tied up in our minds"],
-    "surge": ["loses touch with reality", "what is reality", "real world"],
-    "silver": ["confuse signs", "reckoning and calculating", "newspaper"],
-    "moon": ["beginning of meditation", "cannot be explained in words"],
-    "bloom": ["destroying nature", "lost our senses", "time to wake up"],
-    "bleed": ["self destructive", "this is a disaster", "we must go on"]
+    "thought-loop": ["thinks all the time", "repetition of words", "tied up in our minds"],
+    "illusion": ["loses touch with reality", "world of illusions", "what is reality"],
+    "signs": ["confuse signs", "reckoning and calculating", "newspaper"],
+    "meditation": ["beginning of meditation", "cannot be explained in words"],
+    "nature": ["destroying nature", "lost our senses"],
+    "wake": ["time to wake up", "one must live"],
+    "warning": ["self destructive", "this is a disaster", "we must go on"]
   }
 }

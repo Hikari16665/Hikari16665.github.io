@@ -29,11 +29,12 @@
     "pulse": ["blood", "drug", "love", "weep"]
   },
   "scenes": {
-    "silver": ["snow in the hallways"],
-    "bloom": ["butterflies around me"],
-    "reverie": ["remember", "memory", "nostalgic"],
-    "surge": ["vertigo", "chasing the dragon"],
-    "bleed": ["blood on my teeth", "give me a drug", "watching me weep"],
-    "moon": ["not alone in wondering", "without you near me"]
+    "archive": ["family pc", "remember it accurately"],
+    "snow": ["snow in the hallways"],
+    "butterflies": ["butterflies around me"],
+    "vertigo": ["vertigo", "chasing the dragon"],
+    "nostalgia": ["memory", "remembered", "nostalgic"],
+    "fracture": ["blood on my teeth", "give me a drug", "watching me weep"],
+    "laughter": ["just kidding", "hahahahaha", "good one"]
   }
 }

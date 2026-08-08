@@ -174,8 +174,6 @@ const tracks = Object.entries(audioFiles)
     <div class="fx-moon"></div>
     <div class="fx-bleed"></div>
   </div>
-  <div class="lyric-echo lyric-echo-a" data-lyric-echo-a></div>
-  <div class="lyric-echo lyric-echo-b" data-lyric-echo-b></div>
   <div class="lyric-stage" data-lyric-stage data-layout="0">
     <div class="pv-ident"><span data-pv-track>NO SIGNAL</span><i></i><span data-pv-time>00:00</span></div>
     <p class="lyric-before" data-lyric-before></p>
@@ -397,8 +395,7 @@ const tracks = Object.entries(audioFiles)
     const lyricCurrent = ambient?.querySelector<HTMLElement>('[data-lyric-current]');
     const lyricAfter = ambient?.querySelector<HTMLElement>('[data-lyric-after]');
     const lyricBeam = ambient?.querySelector<HTMLElement>('[data-lyric-beam]');
-    const lyricEchoA = ambient?.querySelector<HTMLElement>('[data-lyric-echo-a]');
-    const lyricEchoB = ambient?.querySelector<HTMLElement>('[data-lyric-echo-b]');
+    let viewportStage = document.querySelector<HTMLElement>('[data-viewport-stage]');
     const pvTrack = ambient?.querySelector<HTMLElement>('[data-pv-track]');
     const pvTime = ambient?.querySelector<HTMLElement>('[data-pv-time]');
     const pvCredits = ambient?.querySelector<HTMLElement>('[data-pv-credits]');
@@ -419,13 +416,22 @@ const tracks = Object.entries(audioFiles)
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const shader = ambientCanvas ? createAmbientShader(ambientCanvas) : null;
     let pvEnabled = tracks[index]?.hasPV || localStorage.getItem('playlist-pv') === 'true';
-    let audioContext: AudioContext | undefined;
-    let analyser: AnalyserNode | undefined;
-    let spectrumData: Uint8Array<ArrayBuffer> | undefined;
+    type SharedAudioGraph = { audio: HTMLAudioElement; context: AudioContext; analyser: AnalyserNode; data: Uint8Array<ArrayBuffer> };
+    const audioGraphHost = window as Window & { __playlistAudioGraph?: SharedAudioGraph };
+    let audioContext = audioGraphHost.__playlistAudioGraph?.audio === audio ? audioGraphHost.__playlistAudioGraph.context : undefined;
+    let analyser = audioGraphHost.__playlistAudioGraph?.audio === audio ? audioGraphHost.__playlistAudioGraph.analyser : undefined;
+    let spectrumData = audioGraphHost.__playlistAudioGraph?.audio === audio ? audioGraphHost.__playlistAudioGraph.data : undefined;
     let frame = 0;
     let lastLyricIndex = -99;
+    let viewportRX = 0;
+    let viewportRY = 0;
+    let viewportTX = 0;
+    let viewportTY = 0;
+    let previousEnergy = 0;
+    let impact = 0;
 
     const updatePageContext = () => {
+      viewportStage = document.querySelector<HTMLElement>('[data-viewport-stage]');
       if (!ambient) return;
       ambient.dataset.context = document.querySelector('[data-reading-page]') ? 'reading' : document.querySelector('.hero') ? 'hero' : 'page';
     };
@@ -440,8 +446,10 @@ const tracks = Object.entries(audioFiles)
         const source = audioContext.createMediaElementSource(audio);
         source.connect(analyser);
         analyser.connect(audioContext.destination);
+        audioGraphHost.__playlistAudioGraph = { audio, context: audioContext, analyser, data: spectrumData };
       }
-      if (audioContext.state === 'suspended') await audioContext.resume();
+      if (audioContext.state !== 'running') await audioContext.resume();
+      player.dataset.spectrum = audioContext.state === 'running' ? 'ready' : 'suspended';
     };
 
     const readBands = (): [number, number, number] => {
@@ -454,6 +462,41 @@ const tracks = Object.entries(audioFiles)
       };
       const weights = tracks[index].pv.spectrum;
       return [average(1, 10) * weights.bass, average(10, 36) * weights.mid, average(36, 90) * weights.high];
+    };
+
+    const resetViewport = () => {
+      viewportRX = viewportRY = viewportTX = viewportTY = impact = previousEnergy = 0;
+      viewportStage?.style.setProperty('--audio-rx', '0deg');
+      viewportStage?.style.setProperty('--audio-ry', '0deg');
+      viewportStage?.style.setProperty('--audio-tx', '0px');
+      viewportStage?.style.setProperty('--audio-ty', '0px');
+      viewportStage?.removeAttribute('data-audio-impact');
+    };
+
+    const updateViewport = (bands: [number, number, number]) => {
+      if (!viewportStage || reducedMotion.matches) { resetViewport(); return; }
+      const [bass, mid, high] = bands;
+      const energy = bass * .48 + mid * .34 + high * .18;
+      const change = Math.abs(energy - previousEnergy);
+      const motion = tracks[index].pv.motion;
+      if (change > .105 || bass > .72) impact = Math.min(1, impact + change * 4.6 + Math.max(0, bass - .72) * 2.2);
+      previousEnergy += (energy - previousEnergy) * .28;
+      const active = energy > .012;
+      const targetRX = active ? (mid - bass * .28) * -2.1 * (1 + motion.drift) : 0;
+      const targetRY = active ? (high - bass * .58) * 2.8 * (1 + motion.drift) : 0;
+      viewportRX += (targetRX - viewportRX) * .1;
+      viewportRY += (targetRY - viewportRY) * .1;
+      const jitter = impact * (1.4 + motion.glitch * 3.4);
+      const targetTX = active ? Math.sin(performance.now() * .0017) * bass * 1.7 : 0;
+      const targetTY = active ? Math.cos(performance.now() * .0013) * mid * 1.15 : 0;
+      viewportTX += (targetTX - viewportTX) * .15;
+      viewportTY += (targetTY - viewportTY) * .15;
+      viewportStage.style.setProperty('--audio-rx', `${viewportRX + (Math.random() - .5) * jitter}deg`);
+      viewportStage.style.setProperty('--audio-ry', `${viewportRY + (Math.random() - .5) * jitter}deg`);
+      viewportStage.style.setProperty('--audio-tx', `${viewportTX + (Math.random() - .5) * jitter * 3.2}px`);
+      viewportStage.style.setProperty('--audio-ty', `${viewportTY + (Math.random() - .5) * jitter * 2.4}px`);
+      viewportStage.toggleAttribute('data-audio-impact', impact > .16);
+      impact *= .78;
     };
 
     const updateAmbient = () => {
@@ -488,8 +531,6 @@ const tracks = Object.entries(audioFiles)
         if (lyricBefore) lyricBefore.textContent = previousLine?.text ?? '';
         if (lyricCurrent) lyricCurrent.textContent = display;
         if (lyricAfter) lyricAfter.textContent = next?.text ?? '';
-        if (lyricEchoA) lyricEchoA.textContent = display;
-        if (lyricEchoB) lyricEchoB.textContent = next?.text ?? display;
       }
       lyricStage?.toggleAttribute('data-interlude-active', isInterlude);
       if (lyricBeam) lyricBeam.style.transform = `scaleX(${lineProgress})`;
@@ -500,7 +541,9 @@ const tracks = Object.entries(audioFiles)
     const animateAmbient = (timestamp: number) => {
       if (!pvEnabled) return;
       updateAmbient();
-      shader?.draw(reducedMotion.matches ? 0 : timestamp / 1000, readBands(), tracks[index].pv);
+      const bands = readBands();
+      shader?.draw(reducedMotion.matches ? 0 : timestamp / 1000, bands, tracks[index].pv);
+      updateViewport(bands);
       frame = window.requestAnimationFrame(animateAmbient);
     };
 
@@ -527,7 +570,7 @@ const tracks = Object.entries(audioFiles)
         ambient?.style.setProperty('--pv-type-boost', `${(tracks[index].pv.typography.scale - 1) * 2}vw`);
         ambient?.style.setProperty('--pv-tracking', `${tracks[index].pv.typography.tracking}em`);
         frame = window.requestAnimationFrame(animateAmbient);
-      }
+      } else resetViewport();
     };
 
     const syncPlaybackState = () => {
@@ -568,7 +611,10 @@ const tracks = Object.entries(audioFiles)
     previous?.addEventListener('click', () => { setupAnalyser().catch(() => undefined); selectTrack(index - 1, true); });
     next?.addEventListener('click', () => { setupAnalyser().catch(() => undefined); selectTrack(index + 1, true); });
     audio.addEventListener('ended', () => selectTrack(index + 1, true));
-    audio.addEventListener('play', syncPlaybackState);
+    audio.addEventListener('play', () => {
+      syncPlaybackState();
+      if (pvEnabled) setupAnalyser().catch(() => { player.dataset.spectrum = 'failed'; });
+    });
     audio.addEventListener('pause', syncPlaybackState);
     audio.addEventListener('loadedmetadata', () => { if (duration) duration.textContent = formatTime(audio.duration); });
     audio.addEventListener('timeupdate', () => {
@@ -655,7 +701,7 @@ const tracks = Object.entries(audioFiles)
 
   .lyric-ambient { --pv-intensity: .68; --pv-canvas-opacity: .68; --pv-signal: var(--hologram-color); --pv-accent: var(--hologram-secondary); --pv-type-boost: 0vw; --pv-tracking: -.055em; position: fixed; z-index: 1; inset: 0; overflow: hidden; background: transparent; opacity: 0; pointer-events: none; transition: opacity 1.1s ease; }
   .lyric-ambient[data-active] { opacity: 1; }
-  .lyric-ambient canvas, .ambient-grid, .ambient-safe-mask, .pv-scene-fx, .lyric-echo, .lyric-stage { position: absolute; }
+  .lyric-ambient canvas, .ambient-grid, .ambient-safe-mask, .pv-scene-fx, .lyric-stage { position: absolute; }
   .lyric-ambient canvas { inset: 0; width: 100%; height: 100%; opacity: var(--pv-canvas-opacity); filter: saturate(.85); }
   .ambient-grid { inset: 0; background-image: linear-gradient(rgba(114,232,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(168,121,255,.035) 1px, transparent 1px); background-size: 7rem 7rem; mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 78%, transparent); opacity: .65; }
   .ambient-safe-mask { z-index: 1; inset: 0; background: radial-gradient(ellipse 54% 54% at 48% 46%, color-mix(in srgb, var(--color-bg) 82%, transparent) 0 20%, color-mix(in srgb, var(--color-bg) 54%, transparent) 46%, transparent 78%), linear-gradient(to bottom, color-mix(in srgb, var(--color-bg) 48%, transparent), transparent 18% 78%, color-mix(in srgb, var(--color-bg) 45%, transparent)); }
@@ -665,7 +711,7 @@ const tracks = Object.entries(audioFiles)
   .fx-wave i { position: absolute; right: 15%; bottom: 0; left: 15%; aspect-ratio: 2.4 / 1; border: 1px solid color-mix(in srgb, var(--pv-signal) 62%, transparent); border-radius: 50%; box-shadow: 0 0 2rem color-mix(in srgb, var(--pv-signal) 19%, transparent), inset 0 0 2rem color-mix(in srgb, var(--pv-accent) 12%, transparent); animation: pv-wave-surge 2.4s ease-out infinite; }
   .fx-wave i:nth-child(2) { animation-delay: .55s; }
   .fx-wave i:nth-child(3) { animation-delay: 1.1s; }
-  [data-scene='surge'] .fx-wave { opacity: .9; }
+  [data-scene='surge'] .fx-wave, [data-scene='vertigo'] .fx-wave, [data-scene='illusion'] .fx-wave, [data-scene='wake'] .fx-wave { opacity: .9; }
   .fx-bloom { top: 44%; left: 67%; width: 1px; height: 1px; }
   .fx-bloom i { --petal-angle: 0deg; position: absolute; width: clamp(2.4rem, 7vw, 6.5rem); height: clamp(1rem, 2.6vw, 2.4rem); border: 1px solid color-mix(in srgb, var(--pv-accent) 68%, transparent); border-radius: 100% 0 100% 0; background: linear-gradient(90deg, color-mix(in srgb, var(--pv-accent) 20%, transparent), transparent); box-shadow: 0 0 1.4rem color-mix(in srgb, var(--pv-accent) 18%, transparent); transform: rotate(var(--petal-angle)) scaleX(0); transform-origin: left center; animation: pv-petal-bloom 2.6s var(--ease-out) infinite; }
   .fx-bloom i:nth-child(2) { --petal-angle: 40deg; animation-delay: .08s; }
@@ -676,24 +722,24 @@ const tracks = Object.entries(audioFiles)
   .fx-bloom i:nth-child(7) { --petal-angle: 240deg; animation-delay: .48s; }
   .fx-bloom i:nth-child(8) { --petal-angle: 280deg; animation-delay: .56s; }
   .fx-bloom i:nth-child(9) { --petal-angle: 320deg; animation-delay: .64s; }
-  [data-scene='bloom'] .fx-bloom { opacity: 1; }
+  [data-scene='bloom'] .fx-bloom, [data-scene='butterflies'] .fx-bloom, [data-scene='nature'] .fx-bloom { opacity: 1; }
   .fx-sand { inset: 0; background-image: radial-gradient(circle, color-mix(in srgb, #e8ecff 52%, transparent) 0 1px, transparent 1.5px); background-size: 2.3rem 2.3rem; mask-image: linear-gradient(15deg, #000, transparent 68%); animation: pv-sand-drift 7s linear infinite; }
-  [data-scene='silver'] .fx-sand { opacity: .72; }
+  [data-scene='silver'] .fx-sand, [data-scene='snow'] .fx-sand, [data-scene='signs'] .fx-sand { opacity: .72; }
   .fx-moon { top: 8vh; right: 12vw; width: clamp(8rem, 17vw, 16rem); aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--pv-signal) 42%, transparent); border-radius: 50%; background: radial-gradient(circle at 38% 34%, color-mix(in srgb, #fff 18%, transparent), transparent 54%); box-shadow: 0 0 5rem color-mix(in srgb, var(--pv-signal) 28%, transparent), inset 0 0 3rem color-mix(in srgb, var(--pv-accent) 13%, transparent); transform: scale(.72); transition: opacity .8s ease, transform 1.8s var(--ease-out); }
-  [data-scene='moon'] .fx-moon { opacity: .82; transform: scale(1); }
+  [data-scene='moon'] .fx-moon, [data-scene='meditation'] .fx-moon { opacity: .82; transform: scale(1); }
   .fx-bleed { inset: 0; background: radial-gradient(circle at 50% 56%, color-mix(in srgb, #ff174f 24%, transparent), transparent 9%, color-mix(in srgb, #ff174f 8%, transparent) 17%, transparent 38%); animation: pv-heart-pulse 1.25s ease-in-out infinite; }
-  [data-scene='bleed'] .fx-bleed { opacity: .84; }
-  [data-scene='reverie'] .lyric-echo-a { animation: pv-reverie-a 4.8s ease-in-out infinite alternate; opacity: .86; }
-  [data-scene='reverie'] .lyric-echo-b { animation: pv-reverie-b 5.4s ease-in-out infinite alternate; opacity: .74; }
+  [data-scene='bleed'] .fx-bleed, [data-scene='fracture'] .fx-bleed, [data-scene='warning'] .fx-bleed { opacity: .84; }
+  [data-scene='archive'] .ambient-grid { opacity: 1; background-size: 2rem 2rem; }
+  [data-scene='nostalgia'] .lyric-current { filter: blur(.35px); opacity: .76; }
+  [data-scene='laughter'] .lyric-current { animation: pv-laughter .34s steps(2, end) infinite; }
+  [data-scene='thought-loop'] .lyric-current { text-shadow: .12em 0 color-mix(in srgb, var(--pv-signal) 20%, transparent), -.12em 0 color-mix(in srgb, var(--pv-accent) 18%, transparent); }
   .lyric-ambient[data-theme='nostalgia-terminal'] .ambient-grid { background-size: 3.2rem 3.2rem; opacity: .42; filter: blur(.2px); }
   .lyric-ambient[data-theme='nostalgia-terminal'] .lyric-current { font-family: var(--font-sans); font-weight: 520; text-shadow: .025em 0 color-mix(in srgb, var(--pv-accent) 24%, transparent), -.025em 0 color-mix(in srgb, var(--pv-signal) 22%, transparent), 0 0 3.2rem color-mix(in srgb, var(--pv-accent) 18%, transparent); }
-  .lyric-ambient[data-theme='nostalgia-terminal'] .lyric-echo { font-weight: 560; -webkit-text-stroke-width: .7px; filter: blur(.35px); }
-  .lyric-ambient[data-theme='nostalgia-terminal'][data-scene='bloom'] .fx-bloom i { width: clamp(1.8rem, 5vw, 4.5rem); height: clamp(.8rem, 2vw, 1.8rem); border-radius: 100% 12% 100% 12%; }
+  .lyric-ambient[data-theme='nostalgia-terminal'][data-scene='butterflies'] .fx-bloom i { width: clamp(1.8rem, 5vw, 4.5rem); height: clamp(.8rem, 2vw, 1.8rem); border-radius: 100% 12% 100% 12%; }
   .lyric-ambient[data-theme='thought-circuit'] .ambient-grid { background-size: 2.6rem 2.6rem; opacity: .9; transform: perspective(28rem) rotateX(11deg) scale(1.08); transform-origin: center bottom; }
   .lyric-ambient[data-theme='thought-circuit'] .lyric-current { max-width: 23ch; font-family: var(--font-mono); font-weight: 620; line-height: 1.02; text-transform: uppercase; text-shadow: .06em 0 color-mix(in srgb, var(--pv-accent) 30%, transparent), 0 0 1.8rem color-mix(in srgb, var(--pv-signal) 22%, transparent); }
   .lyric-ambient[data-theme='thought-circuit'] .lyric-before, .lyric-ambient[data-theme='thought-circuit'] .lyric-after { text-transform: uppercase; letter-spacing: .13em; }
-  .lyric-ambient[data-theme='thought-circuit'] .lyric-echo { font-family: var(--font-mono); font-weight: 500; letter-spacing: -.04em; }
-  .lyric-ambient[data-theme='thought-circuit'][data-scene='silver'] .fx-sand { background-image: linear-gradient(90deg, transparent 48%, color-mix(in srgb, var(--pv-accent) 32%, transparent) 49% 51%, transparent 52%), radial-gradient(circle, var(--pv-signal) 0 1px, transparent 1.5px); background-size: 8rem 2rem, 2rem 2rem; }
+  .lyric-ambient[data-theme='thought-circuit'][data-scene='signs'] .fx-sand { background-image: linear-gradient(90deg, transparent 48%, color-mix(in srgb, var(--pv-accent) 32%, transparent) 49% 51%, transparent 52%), radial-gradient(circle, var(--pv-signal) 0 1px, transparent 1.5px); background-size: 8rem 2rem, 2rem 2rem; }
   .lyric-stage { --lyric-length: 12; z-index: 3; top: clamp(8rem, 19vh, 13rem); left: clamp(1.2rem, 5vw, 6rem); display: grid; width: min(58rem, 70vw); gap: clamp(.65rem, 1.4vw, 1.2rem); color: color-mix(in srgb, var(--color-text) 62%, transparent); transform-origin: left center; transition: left .9s var(--ease-out), right .9s var(--ease-out), top .9s var(--ease-out), transform .9s var(--ease-out); }
   .pv-ident { display: flex; max-width: 42rem; align-items: center; gap: .75rem; color: color-mix(in srgb, var(--pv-signal) 64%, transparent); font-family: var(--font-mono); font-size: .56rem; letter-spacing: .13em; text-transform: uppercase; }
   .pv-ident i { height: 1px; flex: 1; background: linear-gradient(90deg, currentColor, transparent); }
@@ -712,9 +758,6 @@ const tracks = Object.entries(audioFiles)
   .lyric-stage[data-mood='pulse'] .lyric-current { text-shadow: .035em 0 color-mix(in srgb, #ff4f91 26%, transparent), -.035em 0 color-mix(in srgb, var(--hologram-color) 22%, transparent); }
   .lyric-stage[data-mood='dream'] .lyric-current { font-style: italic; letter-spacing: -.035em; filter: blur(.15px); }
   .lyric-stage[data-mood='wave'] .lyric-current { transform: skewX(-3deg); }
-  .lyric-echo { z-index: 2; max-width: 80vw; color: transparent; font-family: var(--font-sans); font-size: clamp(6rem, 18vw, 19rem); font-weight: 800; line-height: .75; letter-spacing: -.08em; -webkit-text-stroke: 1px color-mix(in srgb, var(--pv-signal) 11%, transparent); opacity: .5; white-space: nowrap; }
-  .lyric-echo-a { top: -3vh; left: -4vw; transform: rotate(-5deg); }
-  .lyric-echo-b { right: -5vw; bottom: -3vh; transform: rotate(4deg); -webkit-text-stroke-color: color-mix(in srgb, var(--pv-accent) 10%, transparent); }
   .interlude { display: none; align-items: center; gap: .55rem; color: color-mix(in srgb, var(--hologram-color) 48%, transparent); font-family: var(--font-mono); font-size: .5rem; letter-spacing: .16em; }
   .interlude[data-visible] { display: flex; }
   .interlude span { width: .32rem; aspect-ratio: 1; border-radius: 50%; background: currentColor; animation: ambient-signal 1.8s ease-in-out infinite; }
@@ -725,7 +768,6 @@ const tracks = Object.entries(audioFiles)
   .lyric-ambient[data-context='reading'] .ambient-safe-mask { background: radial-gradient(ellipse 48rem 72% at 48% 48%, color-mix(in srgb, var(--color-bg) 96%, transparent) 0 48%, color-mix(in srgb, var(--color-bg) 68%, transparent) 69%, transparent 100%); }
   .lyric-ambient[data-context='reading'] .lyric-stage { top: 23vh; left: auto; right: -5vw; width: 48vw; opacity: .38; }
   .lyric-ambient[data-context='reading'] .lyric-before, .lyric-ambient[data-context='reading'] .lyric-after, .lyric-ambient[data-context='reading'] .pv-credits { opacity: .42; }
-  .lyric-ambient[data-context='reading'] .lyric-echo { opacity: .24; }
 
   @keyframes disc-spin { to { transform: rotate(360deg); } }
   @keyframes disc-pulse { 50% { inset: -.35rem; opacity: .2; } }
@@ -735,8 +777,7 @@ const tracks = Object.entries(audioFiles)
   @keyframes pv-petal-bloom { 0%, 12% { opacity: 0; transform: rotate(var(--petal-angle)) scaleX(0); } 36%, 72% { opacity: .9; transform: rotate(var(--petal-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--petal-angle)) scaleX(1.3) translateX(1.2rem); } }
   @keyframes pv-sand-drift { to { background-position: 9rem -5rem; } }
   @keyframes pv-heart-pulse { 0%, 100% { transform: scale(.88); filter: saturate(.7); } 45% { transform: scale(1.12); filter: saturate(1.4); } }
-  @keyframes pv-reverie-a { to { transform: translate(12vw, 9vh) rotate(2deg) scale(1.14); } }
-  @keyframes pv-reverie-b { to { transform: translate(-15vw, -8vh) rotate(-3deg) scale(.88); } }
+  @keyframes pv-laughter { 0%, 100% { transform: translate(0); } 35% { transform: translate(.08em, -.025em) skewX(-2deg); } 70% { transform: translate(-.06em, .02em) skewX(2deg); } }
   @media (max-width: 640px) {
     .playlist { right: .8rem; bottom: .8rem; }
     .playlist-toggle { min-width: 0; padding: .48rem; }
@@ -749,12 +790,11 @@ const tracks = Object.entries(audioFiles)
     .lyric-stage, .lyric-stage[data-layout] { top: auto; right: auto; bottom: 12vh; left: 1rem; width: calc(100vw - 2rem); justify-items: start; text-align: left; transform: none; }
     .lyric-current { max-width: 94vw; font-size: clamp(2rem, 10vw, 4.2rem); }
     .lyric-before, .lyric-after { max-width: 84vw; font-size: .58rem; }
-    .lyric-echo { font-size: 25vw; opacity: .28; }
     .pv-credits { display: none; }
     .lyric-ambient[data-context='reading'] .lyric-stage { right: auto; bottom: 5vh; left: 1rem; width: calc(100vw - 2rem); opacity: .2; }
   }
   @media (prefers-reduced-motion: reduce) {
-    [data-playing] .disc, [data-playing] .signal-disc, [data-playing] .disc i, .lyric-current, .interlude span, .pv-scene-fx *, .lyric-echo { animation: none !important; }
+    [data-playing] .disc, [data-playing] .signal-disc, [data-playing] .disc i, .lyric-current, .interlude span, .pv-scene-fx * { animation: none !important; }
     .lyric-stage { transition: none; }
   }
 </style>
