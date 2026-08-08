@@ -1,0 +1,262 @@
+---
+const audioFiles = import.meta.glob<string>('../content/playlist/*.mp3', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+const tracks = Object.entries(audioFiles)
+  .map(([path, src]) => {
+    const encodedName = path.split('/').at(-1)?.replace(/\.mp3$/i, '') ?? '未知曲目';
+    let name = encodedName;
+    try { name = decodeURIComponent(encodedName); } catch { /* Keep the original filename. */ }
+    const separator = name.lastIndexOf('-');
+    return {
+      src,
+      title: separator > 0 ? name.slice(0, separator).trim() : name.trim(),
+      composer: separator > 0 ? name.slice(separator + 1).trim() : '未知作曲家',
+    };
+  })
+  .sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'));
+---
+
+<aside class="playlist" data-playlist-player data-empty={tracks.length === 0 ? '' : undefined} transition:persist="playlist-player">
+  <button class="playlist-toggle" type="button" data-playlist-toggle aria-expanded="false" aria-label="打开播放列表">
+    <span class="disc" aria-hidden="true"><i></i></span>
+    <span class="toggle-label">PLAYLIST</span>
+    <span class="track-count">{String(tracks.length).padStart(2, '0')}</span>
+  </button>
+
+  <section class="playlist-panel" data-playlist-panel aria-label="音乐播放列表" aria-hidden="true">
+    <header class="panel-header">
+      <div><small>AUDIO ARCHIVE</small><strong>私人播放列表</strong></div>
+      <button type="button" data-playlist-close aria-label="关闭播放列表">×</button>
+    </header>
+
+    {tracks.length > 0 ? (
+      <>
+        <div class="now-playing">
+          <div class="signal-disc" data-signal-disc aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="track-copy">
+            <small data-track-position>TRACK 01 / {String(tracks.length).padStart(2, '0')}</small>
+            <strong data-track-title>{tracks[0].title}</strong>
+            <span data-track-composer>{tracks[0].composer}</span>
+          </div>
+        </div>
+
+        <div class="timeline">
+          <input data-audio-progress type="range" min="0" max="1000" value="0" aria-label="播放进度" />
+          <div><time data-current-time>00:00</time><time data-duration>00:00</time></div>
+        </div>
+
+        <div class="audio-controls">
+          <button type="button" data-audio-previous aria-label="上一首">‹</button>
+          <button class="play" type="button" data-audio-play aria-label="播放"><span data-play-icon>▶</span></button>
+          <button type="button" data-audio-next aria-label="下一首">›</button>
+          <label class="volume" aria-label="音量">
+            <span aria-hidden="true">VOL</span>
+            <input data-audio-volume type="range" min="0" max="1" step="0.05" value="0.72" />
+          </label>
+        </div>
+
+        <ol class="track-list" data-track-list>
+          {tracks.map((track, index) => (
+            <li>
+              <button
+                type="button"
+                data-track-index={index}
+                data-track-src={track.src}
+                data-track-title={track.title}
+                data-track-composer={track.composer}
+                aria-current={index === 0 ? 'true' : undefined}
+              >
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <span><strong>{track.title}</strong><small>{track.composer}</small></span>
+                <i aria-hidden="true"></i>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <audio data-playlist-audio preload="metadata" src={tracks[0].src}></audio>
+      </>
+    ) : (
+      <div class="empty-playlist">
+        <span aria-hidden="true">NO SIGNAL</span>
+        <strong>播放列表还是空的</strong>
+        <p>把“歌名-作曲家.mp3”放进<br /><code>src/content/playlist/</code></p>
+      </div>
+    )}
+  </section>
+</aside>
+
+<script>
+  interface PlaylistTrack {
+    src: string;
+    title: string;
+    composer: string;
+  }
+
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds)) return '00:00';
+    const minutes = Math.floor(seconds / 60);
+    return `${String(minutes).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  };
+
+  const setupPlaylist = () => {
+    const player = document.querySelector<HTMLElement>('[data-playlist-player]');
+    if (!player || player.dataset.ready === 'true') return;
+    player.dataset.ready = 'true';
+
+    const toggle = player.querySelector<HTMLButtonElement>('[data-playlist-toggle]');
+    const close = player.querySelector<HTMLButtonElement>('[data-playlist-close]');
+    const panel = player.querySelector<HTMLElement>('[data-playlist-panel]');
+    const setOpen = (open: boolean) => {
+      player.toggleAttribute('data-open', open);
+      toggle?.setAttribute('aria-expanded', String(open));
+      toggle?.setAttribute('aria-label', open ? '关闭播放列表' : '打开播放列表');
+      panel?.setAttribute('aria-hidden', String(!open));
+    };
+    toggle?.addEventListener('click', () => setOpen(!player.hasAttribute('data-open')));
+    close?.addEventListener('click', () => setOpen(false));
+
+    const audio = player.querySelector<HTMLAudioElement>('[data-playlist-audio]');
+    const trackButtons = [...player.querySelectorAll<HTMLButtonElement>('[data-track-index]')];
+    if (!audio || trackButtons.length === 0) return;
+
+    const play = player.querySelector<HTMLButtonElement>('[data-audio-play]');
+    const icon = player.querySelector<HTMLElement>('[data-play-icon]');
+    const previous = player.querySelector<HTMLButtonElement>('[data-audio-previous]');
+    const next = player.querySelector<HTMLButtonElement>('[data-audio-next]');
+    const progress = player.querySelector<HTMLInputElement>('[data-audio-progress]');
+    const volume = player.querySelector<HTMLInputElement>('[data-audio-volume]');
+    const currentTime = player.querySelector<HTMLTimeElement>('[data-current-time]');
+    const duration = player.querySelector<HTMLTimeElement>('[data-duration]');
+    const position = player.querySelector<HTMLElement>('[data-track-position]');
+    const title = player.querySelector<HTMLElement>('[data-track-title]');
+    const composer = player.querySelector<HTMLElement>('[data-track-composer]');
+    const tracks: PlaylistTrack[] = trackButtons.map((button) => ({
+      src: button.dataset.trackSrc ?? '',
+      title: button.dataset.trackTitle ?? '未知曲目',
+      composer: button.dataset.trackComposer ?? '未知作曲家',
+    }));
+
+    let index = Math.min(Number.parseInt(localStorage.getItem('playlist-track') ?? '0', 10) || 0, tracks.length - 1);
+    audio.volume = Math.min(1, Math.max(0, Number.parseFloat(localStorage.getItem('playlist-volume') ?? '0.72')));
+    if (volume) volume.value = String(audio.volume);
+
+    const syncPlaybackState = () => {
+      const playing = !audio.paused;
+      player.toggleAttribute('data-playing', playing);
+      if (icon) icon.textContent = playing ? 'Ⅱ' : '▶';
+      if (play) play.ariaLabel = playing ? '暂停' : '播放';
+    };
+
+    const selectTrack = (nextIndex: number, autoplay = false) => {
+      index = (nextIndex + tracks.length) % tracks.length;
+      const track = tracks[index];
+      audio.src = track.src;
+      audio.load();
+      trackButtons.forEach((button, buttonIndex) => button.toggleAttribute('aria-current', buttonIndex === index));
+      if (title) title.textContent = track.title;
+      if (composer) composer.textContent = track.composer;
+      if (position) position.textContent = `TRACK ${String(index + 1).padStart(2, '0')} / ${String(tracks.length).padStart(2, '0')}`;
+      localStorage.setItem('playlist-track', String(index));
+      if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.composer });
+      if (autoplay) audio.play().catch(() => syncPlaybackState());
+    };
+
+    trackButtons.forEach((button, buttonIndex) => button.addEventListener('click', () => selectTrack(buttonIndex, true)));
+    play?.addEventListener('click', () => audio.paused ? audio.play() : audio.pause());
+    previous?.addEventListener('click', () => selectTrack(index - 1, true));
+    next?.addEventListener('click', () => selectTrack(index + 1, true));
+    audio.addEventListener('ended', () => selectTrack(index + 1, true));
+    audio.addEventListener('play', syncPlaybackState);
+    audio.addEventListener('pause', syncPlaybackState);
+    audio.addEventListener('loadedmetadata', () => { if (duration) duration.textContent = formatTime(audio.duration); });
+    audio.addEventListener('timeupdate', () => {
+      if (currentTime) currentTime.textContent = formatTime(audio.currentTime);
+      if (progress) progress.value = String(audio.duration ? Math.round((audio.currentTime / audio.duration) * 1000) : 0);
+    });
+    progress?.addEventListener('input', () => { if (audio.duration) audio.currentTime = (Number(progress.value) / 1000) * audio.duration; });
+    volume?.addEventListener('input', () => {
+      audio.volume = Number(volume.value);
+      localStorage.setItem('playlist-volume', String(audio.volume));
+    });
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => audio.play());
+      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+      navigator.mediaSession.setActionHandler('previoustrack', () => selectTrack(index - 1, true));
+      navigator.mediaSession.setActionHandler('nexttrack', () => selectTrack(index + 1, true));
+    }
+    selectTrack(index);
+    syncPlaybackState();
+  };
+
+  setupPlaylist();
+  document.addEventListener('astro:page-load', setupPlaylist);
+</script>
+
+<style>
+  .playlist { position: fixed; z-index: 24; right: clamp(1rem, 2.5vw, 2rem); bottom: clamp(1rem, 2.5vw, 2rem); font-family: var(--font-sans); }
+  .playlist-toggle { display: flex; min-width: 10.8rem; align-items: center; gap: .65rem; padding: .55rem .7rem; border: 1px solid var(--color-border); border-radius: 999px; background: color-mix(in srgb, var(--color-surface) 88%, transparent); box-shadow: var(--shadow-soft); color: var(--color-text); cursor: pointer; backdrop-filter: blur(18px); transition: border-color var(--motion-fast), transform var(--motion-fast), opacity var(--motion-fast); }
+  .playlist-toggle:hover { border-color: color-mix(in srgb, var(--hologram-color) 60%, var(--color-border)); transform: translateY(-2px); }
+  .disc { position: relative; display: grid; width: 1.8rem; aspect-ratio: 1; place-items: center; flex: none; border: 1px solid color-mix(in srgb, var(--hologram-color) 60%, transparent); border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 2px, color-mix(in srgb, var(--hologram-color) 18%, transparent) 3px 4px); }
+  .disc::before { content: ''; width: .36rem; aspect-ratio: 1; border-radius: 50%; background: var(--hologram-color); box-shadow: 0 0 .5rem var(--hologram-color); }
+  .disc i { position: absolute; inset: -.18rem; border-top: 1px solid var(--hologram-secondary); border-radius: 50%; opacity: 0; }
+  [data-playing] .disc, [data-playing] .signal-disc { animation: disc-spin 5s linear infinite; }
+  [data-playing] .disc i { opacity: .7; animation: disc-pulse 1.8s ease-in-out infinite; }
+  .toggle-label, .track-count { font-family: var(--font-mono); font-size: .62rem; letter-spacing: .12em; }
+  .track-count { margin-left: auto; color: var(--color-muted); }
+  .playlist-panel { position: absolute; right: 0; bottom: calc(100% + .75rem); width: min(24rem, calc(100vw - 2rem)); max-height: min(38rem, calc(100svh - 7rem)); overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-surface) 94%, transparent); box-shadow: 0 1.5rem 5rem color-mix(in srgb, var(--color-bg) 30%, #000 22%); opacity: 0; pointer-events: none; transform: translateY(.8rem) scale(.97); transform-origin: bottom right; backdrop-filter: blur(24px); transition: opacity var(--motion-base), transform var(--motion-base); }
+  [data-open] .playlist-panel { opacity: 1; pointer-events: auto; transform: none; }
+  [data-open] .playlist-toggle { opacity: .42; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.1rem; border-bottom: 1px solid var(--color-border); }
+  .panel-header div { display: grid; gap: .18rem; }
+  .panel-header small, .track-copy small { color: var(--hologram-color); font-family: var(--font-mono); font-size: .56rem; letter-spacing: .14em; }
+  .panel-header strong { font-size: .88rem; }
+  .panel-header button { border: 0; background: transparent; color: var(--color-muted); font-size: 1.35rem; cursor: pointer; }
+  .now-playing { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr); gap: 1rem; align-items: center; padding: 1.2rem 1.1rem 1rem; }
+  .signal-disc { position: relative; display: grid; aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--hologram-color) 55%, var(--color-border)); border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 .35rem, color-mix(in srgb, var(--hologram-color) 13%, transparent) .37rem .4rem); box-shadow: inset 0 0 1.2rem color-mix(in srgb, var(--hologram-secondary) 10%, transparent); }
+  .signal-disc::after { content: ''; width: .85rem; aspect-ratio: 1; border: 1px solid var(--hologram-secondary); border-radius: 50%; box-shadow: 0 0 .65rem color-mix(in srgb, var(--hologram-secondary) 58%, transparent); }
+  .signal-disc i { position: absolute; width: 1px; height: 42%; background: linear-gradient(transparent, var(--hologram-color)); transform-origin: 50% 100%; }
+  .signal-disc i:nth-child(1) { transform: translateY(-50%) rotate(18deg); }
+  .signal-disc i:nth-child(2) { transform: translateY(-50%) rotate(138deg); }
+  .signal-disc i:nth-child(3) { transform: translateY(-50%) rotate(258deg); }
+  .track-copy { display: grid; min-width: 0; gap: .22rem; }
+  .track-copy strong { overflow: hidden; font-size: 1.05rem; text-overflow: ellipsis; white-space: nowrap; }
+  .track-copy span { overflow: hidden; color: var(--color-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+  .timeline { padding: 0 1.1rem .8rem; }
+  .timeline input, .volume input { width: 100%; height: 2px; accent-color: var(--hologram-color); cursor: pointer; }
+  .timeline div { display: flex; justify-content: space-between; margin-top: .3rem; color: var(--color-muted); font-family: var(--font-mono); font-size: .55rem; }
+  .audio-controls { display: flex; align-items: center; gap: .55rem; padding: 0 1.1rem 1rem; }
+  .audio-controls > button { display: grid; width: 2.2rem; aspect-ratio: 1; place-items: center; border: 1px solid var(--color-border); border-radius: 50%; background: transparent; color: var(--color-text); font-size: 1.2rem; cursor: pointer; }
+  .audio-controls > button:hover { border-color: var(--hologram-color); color: var(--hologram-color); }
+  .audio-controls .play { width: 2.75rem; background: color-mix(in srgb, var(--hologram-color) 12%, var(--color-surface)); font-size: .8rem; }
+  .volume { display: grid; min-width: 0; flex: 1; grid-template-columns: auto minmax(3rem, 1fr); align-items: center; gap: .5rem; margin-left: .35rem; color: var(--color-muted); font-family: var(--font-mono); font-size: .52rem; letter-spacing: .1em; }
+  .track-list { max-height: 14rem; margin: 0; padding: 0; overflow-y: auto; border-top: 1px solid var(--color-border); list-style: none; }
+  .track-list button { display: grid; width: 100%; grid-template-columns: 1.6rem minmax(0, 1fr) .6rem; gap: .65rem; align-items: center; padding: .7rem 1rem; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 64%, transparent); background: transparent; color: var(--color-muted); text-align: left; cursor: pointer; }
+  .track-list button:hover, .track-list button[aria-current] { background: color-mix(in srgb, var(--hologram-color) 7%, transparent); color: var(--color-text); }
+  .track-list button > span:first-child { font-family: var(--font-mono); font-size: .56rem; }
+  .track-list button > span:nth-child(2) { display: grid; min-width: 0; gap: .08rem; }
+  .track-list strong, .track-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-list strong { font-size: .76rem; }
+  .track-list small { color: var(--color-muted); font-size: .62rem; }
+  .track-list i { width: .35rem; aspect-ratio: 1; border-radius: 50%; background: var(--color-border); }
+  .track-list button[aria-current] i { background: var(--hologram-color); box-shadow: 0 0 .5rem var(--hologram-color); }
+  .empty-playlist { display: grid; justify-items: center; gap: .55rem; padding: 2.4rem 1.2rem; text-align: center; }
+  .empty-playlist > span { color: var(--hologram-color); font-family: var(--font-mono); font-size: .6rem; letter-spacing: .16em; }
+  .empty-playlist p { margin: 0; color: var(--color-muted); font-size: .72rem; }
+  .empty-playlist code { color: var(--color-accent); font-family: var(--font-mono); }
+  @keyframes disc-spin { to { transform: rotate(360deg); } }
+  @keyframes disc-pulse { 50% { inset: -.35rem; opacity: .2; } }
+  @media (max-width: 640px) {
+    .playlist { right: .8rem; bottom: .8rem; }
+    .playlist-toggle { min-width: 0; padding: .48rem; }
+    .toggle-label, .track-count { display: none; }
+    .playlist-panel { width: calc(100vw - 1.6rem); max-height: calc(100svh - 5.5rem); }
+    .track-list { max-height: min(13rem, 30svh); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-playing] .disc, [data-playing] .signal-disc, [data-playing] .disc i { animation: none; }
+  }
+</style>

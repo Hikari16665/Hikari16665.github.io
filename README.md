@@ -11,6 +11,16 @@ pnpm dev
 
 部署前请修改 `astro.config.mjs` 中的 `site`，并在 `src/config/site.ts` 更新站点资料。
 
+## 播放列表
+
+把 MP3 文件放入 `src/content/playlist/`，文件名使用 `歌名-作曲家.mp3`：
+
+```text
+src/content/playlist/月光-德彪西.mp3
+```
+
+构建时播放器会自动读取文件，无需维护额外清单。文件名中的最后一个 `-` 用于分隔歌名与作曲家；添加或删除音乐后需要重新构建网站。
+
 ## 视觉入口
 
 - `src/styles/tokens.css`：颜色、字体、间距、圆角、阴影与动效令牌

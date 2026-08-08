@@ -2,6 +2,7 @@
 import SiteHeader from '../components/SiteHeader.astro';
 import PageTransition from '../components/PageTransition.astro';
 import ClickFracture from '../components/ClickFracture.astro';
+import PlaylistPlayer from '../components/PlaylistPlayer.astro';
 import { ClientRouter } from 'astro:transitions';
 import { site } from '../config/site';
 import '../styles/global.css';
@@ -29,6 +30,7 @@ const pageTitle = title ? `${title} · ${site.title}` : site.title;
   <body transition:animate="none">
     <SiteHeader />
     <main><slot /></main>
+    <PlaylistPlayer />
     <ClickFracture />
     <PageTransition />
   </body>
