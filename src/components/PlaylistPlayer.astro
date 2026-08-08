@@ -428,7 +428,9 @@ const tracks = Object.entries(audioFiles)
     let viewportTX = 0;
     let viewportTY = 0;
     let previousEnergy = 0;
+    let previousBass = 0;
     let impact = 0;
+    let lastImpactAt = 0;
 
     const updatePageContext = () => {
       viewportStage = document.querySelector<HTMLElement>('[data-viewport-stage]');
@@ -465,7 +467,7 @@ const tracks = Object.entries(audioFiles)
     };
 
     const resetViewport = () => {
-      viewportRX = viewportRY = viewportTX = viewportTY = impact = previousEnergy = 0;
+      viewportRX = viewportRY = viewportTX = viewportTY = impact = previousEnergy = previousBass = lastImpactAt = 0;
       viewportStage?.style.setProperty('--audio-rx', '0deg');
       viewportStage?.style.setProperty('--audio-ry', '0deg');
       viewportStage?.style.setProperty('--audio-tx', '0px');
@@ -478,25 +480,31 @@ const tracks = Object.entries(audioFiles)
       const [bass, mid, high] = bands;
       const energy = bass * .48 + mid * .34 + high * .18;
       const change = Math.abs(energy - previousEnergy);
+      const bassRise = bass - previousBass;
       const motion = tracks[index].pv.motion;
-      if (change > .105 || bass > .72) impact = Math.min(1, impact + change * 4.6 + Math.max(0, bass - .72) * 2.2);
-      previousEnergy += (energy - previousEnergy) * .28;
+      const now = performance.now();
+      if (now - lastImpactAt > 150 && (change > .16 || bassRise > .14)) {
+        impact = Math.min(.42, change * 1.25 + bassRise * 1.5);
+        lastImpactAt = now;
+      }
+      previousEnergy += (energy - previousEnergy) * .16;
+      previousBass += (bass - previousBass) * .22;
       const active = energy > .012;
-      const targetRX = active ? (mid - bass * .28) * -2.1 * (1 + motion.drift) : 0;
-      const targetRY = active ? (high - bass * .58) * 2.8 * (1 + motion.drift) : 0;
-      viewportRX += (targetRX - viewportRX) * .1;
-      viewportRY += (targetRY - viewportRY) * .1;
-      const jitter = impact * (1.4 + motion.glitch * 3.4);
-      const targetTX = active ? Math.sin(performance.now() * .0017) * bass * 1.7 : 0;
-      const targetTY = active ? Math.cos(performance.now() * .0013) * mid * 1.15 : 0;
-      viewportTX += (targetTX - viewportTX) * .15;
-      viewportTY += (targetTY - viewportTY) * .15;
+      const targetRX = active ? (mid - bass * .28) * -.42 * (1 + motion.drift * .35) : 0;
+      const targetRY = active ? (high - bass * .58) * .56 * (1 + motion.drift * .35) : 0;
+      viewportRX += (targetRX - viewportRX) * .055;
+      viewportRY += (targetRY - viewportRY) * .055;
+      const jitter = impact * (.22 + motion.glitch * .28);
+      const targetTX = active ? Math.sin(now * .00072) * bass * .28 : 0;
+      const targetTY = active ? Math.cos(now * .00061) * mid * .2 : 0;
+      viewportTX += (targetTX - viewportTX) * .07;
+      viewportTY += (targetTY - viewportTY) * .07;
       viewportStage.style.setProperty('--audio-rx', `${viewportRX + (Math.random() - .5) * jitter}deg`);
       viewportStage.style.setProperty('--audio-ry', `${viewportRY + (Math.random() - .5) * jitter}deg`);
-      viewportStage.style.setProperty('--audio-tx', `${viewportTX + (Math.random() - .5) * jitter * 3.2}px`);
-      viewportStage.style.setProperty('--audio-ty', `${viewportTY + (Math.random() - .5) * jitter * 2.4}px`);
-      viewportStage.toggleAttribute('data-audio-impact', impact > .16);
-      impact *= .78;
+      viewportStage.style.setProperty('--audio-tx', `${viewportTX + (Math.random() - .5) * jitter * 1.4}px`);
+      viewportStage.style.setProperty('--audio-ty', `${viewportTY + (Math.random() - .5) * jitter}px`);
+      viewportStage.toggleAttribute('data-audio-impact', impact > .07);
+      impact *= .64;
     };
 
     const updateAmbient = () => {

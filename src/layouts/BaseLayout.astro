@@ -39,7 +39,7 @@ const pageTitle = title ? `${title} · ${site.title}` : site.title;
 </html>
 
 <style is:global>
-  .viewport-stage { --audio-rx: 0deg; --audio-ry: 0deg; --audio-tx: 0px; --audio-ty: 0px; position: relative; z-index: 2; min-height: 100vh; transform: perspective(80rem) translate3d(var(--audio-tx), var(--audio-ty), 0) rotateX(var(--audio-rx)) rotateY(var(--audio-ry)) scale(1.018); transform-origin: 50% 50vh; will-change: transform; }
+  .viewport-stage { --audio-rx: 0deg; --audio-ry: 0deg; --audio-tx: 0px; --audio-ty: 0px; position: relative; z-index: 2; min-height: 100vh; transform: perspective(80rem) translate3d(var(--audio-tx), var(--audio-ty), 0) rotateX(var(--audio-rx)) rotateY(var(--audio-ry)) scale(1.004); transform-origin: 50% 50vh; will-change: transform; }
   @media (prefers-reduced-motion: reduce) { .viewport-stage { transform: none; } }
   ::view-transition-old(root),
   ::view-transition-new(root) {
