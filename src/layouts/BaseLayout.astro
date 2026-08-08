@@ -37,6 +37,7 @@ const pageTitle = title ? `${title} · ${site.title}` : site.title;
 </html>
 
 <style is:global>
+  body > main { position: relative; z-index: 2; }
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;

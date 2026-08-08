@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "theme": "dark-beach",
+  "palette": {
+    "abyss": "#070512",
+    "mist": "#35205d",
+    "signal": "#74ddf2",
+    "accent": "#ff4f91"
+  },
+  "intensity": 0.78,
+  "typography": {
+    "scale": 1.08,
+    "tracking": -0.045,
+    "style": "dream"
+  },
+  "spectrum": {
+    "bass": 0.82,
+    "mid": 0.58,
+    "high": 0.36
+  },
+  "motion": {
+    "waveSpeed": 0.55,
+    "drift": 0.2,
+    "glitch": 0.12
+  },
+  "keywords": {
+    "wave": ["wave", "sea", "beach", "sand"],
+    "dream": ["dream", "sleep", "reverie", "moon", "cloud"],
+    "pulse": ["heart", "bleed", "love", "kiss"]
+  }
+}
