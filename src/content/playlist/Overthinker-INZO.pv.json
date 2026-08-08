@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "theme": "thought-circuit",
+  "palette": {
+    "abyss": "#050a0c",
+    "mist": "#12353b",
+    "signal": "#71ffd2",
+    "accent": "#ffb14a"
+  },
+  "intensity": 0.84,
+  "typography": {
+    "scale": 0.88,
+    "tracking": 0.018,
+    "style": "manifesto"
+  },
+  "spectrum": {
+    "bass": 0.92,
+    "mid": 0.66,
+    "high": 0.7
+  },
+  "motion": {
+    "waveSpeed": 0.78,
+    "drift": 0.12,
+    "glitch": 0.34
+  },
+  "keywords": {
+    "dream": ["thought", "illusion", "chatter", "words", "mind"],
+    "wave": ["reality", "real world", "wake up", "senses"],
+    "pulse": ["self destructive", "disaster", "destroying", "survive"]
+  },
+  "scenes": {
+    "reverie": ["thinks all the time", "repetition of words", "tied up in our minds"],
+    "surge": ["loses touch with reality", "what is reality", "real world"],
+    "silver": ["confuse signs", "reckoning and calculating", "newspaper"],
+    "moon": ["beginning of meditation", "cannot be explained in words"],
+    "bloom": ["destroying nature", "lost our senses", "time to wake up"],
+    "bleed": ["self destructive", "this is a disaster", "we must go on"]
+  }
+}

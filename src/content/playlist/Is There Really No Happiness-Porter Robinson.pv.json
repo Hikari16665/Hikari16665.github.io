@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "theme": "nostalgia-terminal",
+  "palette": {
+    "abyss": "#10111f",
+    "mist": "#615476",
+    "signal": "#bde9f2",
+    "accent": "#ff9eaa"
+  },
+  "intensity": 0.74,
+  "typography": {
+    "scale": 0.94,
+    "tracking": -0.025,
+    "style": "memory"
+  },
+  "spectrum": {
+    "bass": 0.62,
+    "mid": 0.82,
+    "high": 0.52
+  },
+  "motion": {
+    "waveSpeed": 0.32,
+    "drift": 0.42,
+    "glitch": 0.2
+  },
+  "keywords": {
+    "dream": ["remember", "memory", "nostalgic", "who i was"],
+    "wave": ["vertigo", "chasing", "over and done"],
+    "pulse": ["blood", "drug", "love", "weep"]
+  },
+  "scenes": {
+    "silver": ["snow in the hallways"],
+    "bloom": ["butterflies around me"],
+    "reverie": ["remember", "memory", "nostalgic"],
+    "surge": ["vertigo", "chasing the dragon"],
+    "bleed": ["blood on my teeth", "give me a drug", "watching me weep"],
+    "moon": ["not alone in wondering", "without you near me"]
+  }
+}

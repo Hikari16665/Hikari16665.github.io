@@ -27,5 +27,13 @@
     "wave": ["wave", "sea", "beach", "sand"],
     "dream": ["dream", "sleep", "reverie", "moon", "cloud"],
     "pulse": ["heart", "bleed", "love", "kiss"]
+  },
+  "scenes": {
+    "surge": ["pulsing waves", "waves cover me"],
+    "bloom": ["flowers bloom"],
+    "silver": ["silver sand"],
+    "reverie": ["endless reverie"],
+    "moon": ["twilight moon"],
+    "bleed": ["heart was bleeding"]
   }
 }
