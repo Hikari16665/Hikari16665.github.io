@@ -221,7 +221,7 @@ export function IntroOverlay() {
           <div className="intro-loader" data-shake={shake} data-erasing={erasing}>
             <p className="intro-label">
               <span>LOADING</span>
-              <span className="intro-label-cn">正在取回声音</span>
+              <span className="intro-label-cn">拉取数据</span>
             </p>
 
             <div className="intro-bar">
@@ -233,8 +233,6 @@ export function IntroOverlay() {
                 <span className="intro-pct-sign">%</span>
               </div>
             </div>
-
-            <p className="intro-trackname">Porter Robinson — Knock Yourself Out XD</p>
           </div>
         )}
 
