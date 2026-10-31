@@ -27,8 +27,8 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: {
-    default: "Hikari · 服务端插件与工具",
-    template: "%s · Hikari",
+    default: "NYANKOLUNII SELF INTRO",
+    template: "MAGICAL VERY MAGICAL WORLD!",
   },
   description:
     "Hikari（Nyankolunii）—— 住在大连的服务端插件开发者。Minecraft 插件、桌面工具与网页。",
