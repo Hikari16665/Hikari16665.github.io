@@ -1,21 +1,24 @@
 {
-  "name": "personal-astro-blog",
-  "type": "module",
+  "name": "hikari-site",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.12.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro check && astro build",
-    "preview": "astro preview",
-    "check": "astro check"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.4",
-    "@astrojs/markdown-remark": "^7.2.2",
-    "@types/three": "^0.185.4",
-    "astro": "^7.2.0",
-    "three": "^0.185.1",
-    "typescript": "^5.9.2"
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.4.47",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5.6.3"
   }
 }

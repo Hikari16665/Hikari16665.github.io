@@ -1,0 +1,736 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   设计 token —— 与参考站同源：纸白 / 墨黑 / 强调蓝
+------------------------------------------------------------------ */
+@theme {
+  --color-paper: #ffffff;
+  --color-ink: #0b0b0d;
+  --color-muted: #74747e;
+  --color-accent: #5467e8;
+  --color-rule: rgba(11, 11, 13, 0.13);
+
+  --font-display: var(--font-playfair), "Songti SC", "Times New Roman", serif;
+  --font-body: var(--font-roboto), "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+}
+
+:root {
+  --page-pad: clamp(20px, 6vw, 86px);
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(84, 103, 232, 0.16);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  /* 站点里的链接一律继承颜色，:visited 的默认紫不要出现 */
+  a:where(:visited) {
+    color: inherit;
+  }
+}
+
+/* ------------------------------------------------------------------
+   鼠标小扁球（canvas 绘制，跟随指针并拉伸）
+------------------------------------------------------------------ */
+.cursor-blob {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+   链接按下：变色 + 边框；方形的图标用菱形框
+------------------------------------------------------------------ */
+.press {
+  position: relative;
+}
+
+.press::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.94);
+  transition:
+    opacity 0.16s ease,
+    transform 0.24s var(--ease-soft);
+}
+
+.press:active {
+  color: var(--color-accent);
+}
+
+.press:active::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.press-diamond::before {
+  transform: rotate(45deg) scale(0.84);
+}
+
+/* 图标：悬停就出菱形，按下时再确认一次 */
+.press-diamond:hover::before,
+.press-diamond:active::before {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+.press-diamond:hover {
+  color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------------
+   背景：四团漂移的极光 + 星野 + 跟随指针的柔光
+   全部在内容之下，不接收指针事件
+------------------------------------------------------------------ */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora {
+  position: absolute;
+  inset: 0;
+}
+
+.aurora i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  will-change: transform;
+  animation: aurora-drift 90s var(--ease-soft) infinite alternate;
+}
+
+.aurora .aurora-a {
+  left: -22vw;
+  top: -26vh;
+  width: 82vw;
+  height: 82vw;
+  background: radial-gradient(circle, rgba(84, 103, 232, 0.5), rgba(84, 103, 232, 0) 62%);
+  opacity: 0.1;
+  --dx: 6vw;
+  --dy: 4vh;
+  animation-duration: 78s;
+  animation-delay: -12s;
+}
+
+.aurora .aurora-b {
+  right: -26vw;
+  top: -4vh;
+  width: 74vw;
+  height: 74vw;
+  background: radial-gradient(circle, rgba(142, 160, 255, 0.5), rgba(142, 160, 255, 0) 62%);
+  opacity: 0.11;
+  --dx: -7vw;
+  --dy: 6vh;
+  animation-duration: 96s;
+  animation-delay: -34s;
+}
+
+.aurora .aurora-c {
+  left: 2vw;
+  bottom: -34vh;
+  width: 88vw;
+  height: 88vw;
+  background: radial-gradient(circle, rgba(207, 216, 255, 0.62), rgba(207, 216, 255, 0) 64%);
+  opacity: 0.16;
+  --dx: 5vw;
+  --dy: -5vh;
+  animation-duration: 116s;
+  animation-delay: -58s;
+}
+
+.aurora .aurora-d {
+  right: -8vw;
+  bottom: 4vh;
+  width: 58vw;
+  height: 58vw;
+  background: radial-gradient(circle, rgba(127, 214, 232, 0.42), rgba(127, 214, 232, 0) 62%);
+  opacity: 0.07;
+  --dx: -5vw;
+  --dy: -4vh;
+  animation-duration: 88s;
+  animation-delay: -6s;
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(var(--dx, 5vw), var(--dy, -4vh), 0) scale(1.1);
+  }
+}
+
+/* 音乐的低频推一下，最多让背景亮 7% */
+.aurora-pulse {
+  position: absolute;
+  inset: -10%;
+  display: block;
+  background: radial-gradient(
+    55vw 55vw at 50% 44%,
+    rgba(84, 103, 232, 0.45),
+    rgba(84, 103, 232, 0) 64%
+  );
+  opacity: calc(var(--audio-level, 0) * 0.16);
+  pointer-events: none;
+}
+
+.starfield {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cursor-aura {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 640px;
+  height: 640px;
+  margin: -320px 0 0 -320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(84, 103, 232, 0.12), rgba(84, 103, 232, 0) 62%);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition: opacity 0.5s ease;
+}
+
+@media (max-width: 780px) {
+  .cursor-aura {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------
+   入场：三种模式
+   pending  —— 开场还没结束，内容先藏起来
+   normal   —— 普通路由切换：向上淡入
+   assemble —— 从开场进入主页：从左往右「搭建」出来，依次排开
+------------------------------------------------------------------ */
+html[data-mode="pending"] .rise {
+  opacity: 0;
+}
+
+html[data-mode="normal"] .rise {
+  /* backwards 而不是 both：动画结束后交还基础样式，
+     否则 clip-path 会一直留在元素上，把描边、菱形这些溢出内容裁掉 */
+  animation: rise 0.85s var(--ease-soft) backwards;
+  animation-delay: var(--d, 0ms);
+}
+
+html[data-mode="assemble"] .rise {
+  animation: build 0.95s var(--ease-soft) backwards;
+  animation-delay: calc(var(--d, 0ms) * 1.75 + 60ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes build {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+
+/* 首页那张印象图案：在搭建模式里像被画出来 */
+html[data-mode="assemble"] .pattern-wrap {
+  animation: none;
+  opacity: 1;
+}
+
+html[data-mode="assemble"] .home-pattern {
+  animation: pattern-wipe 1.35s var(--ease-soft) backwards;
+  animation-delay: calc(var(--d, 0ms) * 1.75 + 200ms);
+}
+
+@keyframes pattern-wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ------------------------------------------------------------------
+   排版基元
+------------------------------------------------------------------ */
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.nav-link {
+  position: relative;
+  padding-block: 3px;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s var(--ease-soft);
+}
+
+.nav-link:hover::after,
+.nav-link[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+.underline-link {
+  border-bottom: 1px solid rgba(11, 11, 13, 0.28);
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.underline-link:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------------
+   作品封面：渐变底 + 一张印象图案
+------------------------------------------------------------------ */
+.poster {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-image: linear-gradient(150deg, var(--c1), var(--c2));
+}
+
+.poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 0 1px,
+    transparent 1px 8.3333%
+  );
+}
+
+.pattern-art {
+  display: block;
+}
+
+/* 图案的线永远是 1px，不管容器多大 */
+.pattern-art * {
+  vector-effect: non-scaling-stroke;
+}
+
+.poster .pattern-art {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.9s var(--ease-soft);
+}
+
+.card-link:hover .pattern-art {
+  transform: translate3d(0, -4px, 0) scale(1.01);
+}
+
+/* ------------------------------------------------------------------
+   滚动条 / 移动端
+------------------------------------------------------------------ */
+.scroller {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 11, 13, 0.18) transparent;
+  overscroll-behavior: contain;
+}
+
+.scroller::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background: rgba(11, 11, 13, 0.16);
+  border-radius: 99px;
+}
+
+@media (max-width: 780px) {
+  .scroller {
+    scrollbar-width: none;
+  }
+  .scroller::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+  .rise {
+    animation: none;
+  }
+}
+
+/* ==================================================================
+   开场：加载 → 播放 → 星光 → bio → 进入
+   扁平、纯排版，只有一条 1px 的线在动
+================================================================== */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: var(--color-paper);
+  transition: opacity 0.38s ease;
+}
+
+.intro[data-phase="done"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro[data-phase="armed"] {
+  cursor: pointer;
+}
+
+html[data-intro="skip"] .intro {
+  display: none;
+}
+
+.intro-stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 0 24px;
+}
+
+/* ---------- 加载 ---------- */
+.intro-loader {
+  display: flex;
+  width: min(420px, 66vw);
+  flex-direction: column;
+  gap: 14px;
+  animation: intro-fade 0.6s ease both;
+}
+
+.intro-loader[data-shake="true"] {
+  animation: intro-shake 0.34s ease-in-out 2;
+}
+
+.intro-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.intro-label-cn {
+  letter-spacing: 0.2em;
+  text-transform: none;
+  opacity: 0.75;
+}
+
+.intro-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transform-origin: right center;
+  transition:
+    transform 0.5s var(--ease-soft),
+    opacity 0.35s ease 0.08s;
+}
+
+.intro-track {
+  position: relative;
+  height: 1px;
+  flex: 1;
+  overflow: hidden;
+  background: rgba(11, 11, 13, 0.13);
+}
+
+.intro-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+.intro-pct {
+  display: flex;
+  min-width: 3.4ch;
+  align-items: baseline;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-pct-sign {
+  font-size: 9px;
+  color: var(--color-muted);
+}
+
+.intro-trackname {
+  margin: 0;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.intro-loader[data-erasing="true"] .intro-bar {
+  transform: scaleX(0);
+  opacity: 0;
+}
+
+.intro-loader[data-erasing="true"] .intro-label,
+.intro-loader[data-erasing="true"] .intro-trackname {
+  opacity: 0;
+}
+
+@keyframes intro-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-7px);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- 点击进入 ---------- */
+.intro-enter {
+  position: relative;
+  padding: 0 0 10px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: clamp(15px, 1.5vw, 19px);
+  letter-spacing: 0.44em;
+  text-indent: 0.44em;
+  animation: enter-in 0.9s var(--ease-soft) both;
+  transition: color 0.3s ease;
+}
+
+.intro-enter::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  transform-origin: left center;
+  animation: line-in 1.3s var(--ease-soft) 0.35s both;
+}
+
+.intro-enter:hover {
+  color: var(--color-accent);
+}
+
+@keyframes enter-in {
+  from {
+    opacity: 0;
+    letter-spacing: 0.8em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.44em;
+  }
+}
+
+@keyframes line-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- 名字 / bio ---------- */
+.intro-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(36px, 7.4vw, 104px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-align: center;
+  /* backwards：动画结束后收回 clip-path，表情符号不会被裁掉 */
+  animation: name-in 1s var(--ease-soft) backwards;
+}
+
+@keyframes name-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.intro-bio {
+  margin: 0;
+  max-width: min(760px, 86vw);
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: clamp(17px, 2.3vw, 30px);
+  font-weight: 300;
+  letter-spacing: 0.14em;
+  color: var(--color-ink);
+}
+
+/* ---------- 星星：六分位五条线上的一排 ---------- */
+.intro-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.intro-star {
+  position: absolute;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  place-items: center;
+  font-size: 21px;
+  line-height: 1;
+  color: var(--color-accent);
+  opacity: 0.34;
+  transform: scale(0.9);
+  transition:
+    opacity 0.3s ease,
+    transform 0.4s var(--ease-soft);
+}
+
+.intro-star[data-lit="true"] {
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+.intro-star::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  opacity: 0;
+}
+
+.intro-star[data-lit="true"]::after {
+  animation: star-ripple 0.9s ease-out;
+}
+
+@keyframes star-ripple {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
