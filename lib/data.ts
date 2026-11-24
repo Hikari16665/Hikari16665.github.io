@@ -28,6 +28,8 @@ export type Category = "plugin" | "app" | "experiment";
 /** 封面图的种类。每一种对应一张和项目本身有关的印刷示意图。 */
 export type CoverId =
   | "launcher"
+  | "yaml"
+  | "proc"
   | "baritone"
   | "lyrics"
   | "library"
@@ -61,12 +63,32 @@ export const projects: Project[] = [
     cover: { id: "launcher", tag: "app/tools" },
   },
   {
+    name: "mc-yaml-translator",
+    year: "2026",
+    category: "app",
+    summary: "把插件的 YAML 丢给模型翻，占位符和结构都留着，能拖文件也能走命令行",
+    stack: "Python · MIT",
+    stars: 2,
+    href: "https://github.com/Hikari16665/mc-yaml-translator",
+    cover: { id: "yaml", tag: "app/yaml" },
+  },
+  {
+    name: "proc-indicator",
+    year: "2026",
+    category: "app",
+    summary: "KDE 右下角弹半透明的卡片，进程起来是青的，退出是橙的，鼠标放上去就让开",
+    stack: "Python · MIT",
+    stars: 1,
+    href: "https://github.com/Hikari16665/proc-indicator",
+    cover: { id: "proc", tag: "app/kde" },
+  },
+  {
     name: "CarpetBaritoneIntegration",
     year: "2026",
     category: "plugin",
     summary: "把Baritone移植到Fabric Carpet服务端，为红石服务器加了专用指令",
     stack: "Java",
-    stars: 9,
+    stars: 10,
     href: "https://github.com/Hikari16665/CarpetBaritoneIntegration",
     cover: { id: "baritone", tag: "mod/fabric" },
   },
@@ -86,7 +108,7 @@ export const projects: Project[] = [
     category: "plugin",
     summary: "我自己那几个插件共用的基础库",
     stack: "Java",
-    stars: 5,
+    stars: 6,
     href: "https://github.com/Hikari16665/HikariLib",
     cover: { id: "library", tag: "library" },
   },
@@ -114,11 +136,11 @@ export const projects: Project[] = [
     name: "Hikari16665.github.io",
     year: "2026",
     category: "experiment",
-    summary: "带全息视觉效果的 Astro 个人博客",
-    stack: "Astro",
+    summary: "这个站改用 Next.js 了，还是墨色轨道那一套",
+    stack: "Next.js",
     stars: 1,
     href: "https://github.com/Hikari16665/Hikari16665.github.io",
-    cover: { id: "site", tag: "life/blog" },
+    cover: { id: "site", tag: "life/site" },
   },
 ];
 
