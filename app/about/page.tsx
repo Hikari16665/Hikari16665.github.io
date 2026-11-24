@@ -20,7 +20,7 @@ export default function AboutPage() {
           </div>
 
           <div
-            className="rise mt-[clamp(18px,3vh,32px)] max-w-[34em] space-y-[1.15em] text-[15px] leading-[1.78] text-[#17171b]"
+            className="rise mt-[clamp(18px,3vh,32px)] max-w-[34em] space-y-[1.15em] text-[15px] leading-[1.78] text-ink max-[780px]:mt-3 max-[780px]:space-y-2"
             style={{ animationDelay: "120ms" }}
           >
             <p>
@@ -41,7 +41,7 @@ export default function AboutPage() {
           </div>
 
           <dl
-            className="rise mt-[clamp(24px,4vh,40px)] grid max-w-[34em] grid-cols-3 gap-4 border-t border-rule pt-4 max-[780px]:grid-cols-1 max-[780px]:gap-3"
+            className="band-top rise mt-[clamp(24px,4vh,40px)] grid max-w-[34em] grid-cols-3 gap-4 pt-5 max-[780px]:mt-3 max-[780px]:grid-cols-1 max-[780px]:gap-2 max-[780px]:pt-3"
             style={{ animationDelay: "200ms" }}
           >
             <div>

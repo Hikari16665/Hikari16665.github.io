@@ -13,6 +13,7 @@ import {
   STAR_Y,
   litIndexFor,
 } from "@/lib/intro";
+import { Spark } from "@/components/spark";
 import { bootIntro, bootState } from "@/lib/intro-boot";
 import { getAudioElement } from "@/lib/sound";
 
@@ -209,9 +210,10 @@ export function IntroOverlay() {
             key={index}
             className="intro-star"
             data-lit={isLit(index)}
+            data-tone={index % 2 === 0 ? "cyan" : "pink"}
             style={{ left: `${x}%`, top: `${STAR_Y}%` }}
           >
-            ✦
+            <Spark className="intro-spark" />
           </span>
         ))}
       </div>

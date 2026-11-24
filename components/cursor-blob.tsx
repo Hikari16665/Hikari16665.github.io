@@ -2,20 +2,27 @@
 
 import { useEffect, useRef } from "react";
 
-type Particle = {
+type Shard = {
   x: number;
   y: number;
   vx: number;
   vy: number;
+  rot: number;
+  vr: number;
   life: number;
   max: number;
-  r: number;
+  size: number;
+  color: string;
 };
 
+type TrailPoint = { x: number; y: number; born: number };
+
+const SHARD_COLORS = ["#39d7cc", "#f5358d", "#f7c2dc"];
+
 /**
- * 参考站那颗跟着鼠标跑的小扁球：
- * 顺着运动方向拉长，停下来就缩成一个点，走的时候向四周溅出细小的粒子。
- * 触屏设备和「减少动态效果」下直接不启动。
+ * 墨裂：移动时是一条很短的梅子色细线，旁边错一笔青。
+ * 按住左键拖动时，线裂成青 / 洋红 / 浅粉的三角碎片，向两侧飘开，
+ * 松开后大约 0.3s 散尽。触屏和「减少动态效果」下不启动。
  */
 export function CursorBlob() {
   const ref = useRef<HTMLCanvasElement | null>(null);
@@ -43,28 +50,56 @@ export function CursorBlob() {
     };
     resize();
 
-    const target = { x: -200, y: -200 };
-    const pos = { x: -200, y: -200 };
+    const pointer = { x: -200, y: -200 };
     const prev = { x: -200, y: -200 };
     let visible = false;
+    let held = false;
     let last = performance.now();
-    let emitAcc = 0;
-    const parts: Particle[] = [];
+    let lastEmit = 0;
+    const trail: TrailPoint[] = [];
+    const shards: Shard[] = [];
 
     const onMove = (event: PointerEvent) => {
-      target.x = event.clientX;
-      target.y = event.clientY;
+      if (event.pointerType === "touch") return;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      held = (event.buttons & 1) === 1;
       if (!visible) {
-        pos.x = target.x;
-        pos.y = target.y;
-        prev.x = pos.x;
-        prev.y = pos.y;
+        prev.x = pointer.x;
+        prev.y = pointer.y;
         visible = true;
       }
     };
 
+    const onDown = (event: PointerEvent) => {
+      if (event.pointerType === "touch" || event.button !== 0) return;
+      held = true;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+    };
+
+    const release = () => {
+      held = false;
+    };
+
     const onLeave = () => {
       visible = false;
+      held = false;
+    };
+
+    const strokeTrail = (ox: number, oy: number, color: string, width: number, alpha: number) => {
+      if (trail.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x + ox, trail[0].y + oy);
+      for (let i = 1; i < trail.length; i += 1) {
+        ctx.lineTo(trail[i].x + ox, trail[i].y + oy);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.globalAlpha = alpha;
+      ctx.stroke();
     };
 
     let raf = 0;
@@ -72,84 +107,106 @@ export function CursorBlob() {
       const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
       last = now;
 
-      pos.x += (target.x - pos.x) * 0.26;
-      pos.y += (target.y - pos.y) * 0.26;
-
-      const vx = (pos.x - prev.x) / dt;
-      const vy = (pos.y - prev.y) / dt;
-      prev.x = pos.x;
-      prev.y = pos.y;
-
+      const vx = (pointer.x - prev.x) / dt;
+      const vy = (pointer.y - prev.y) / dt;
+      prev.x = pointer.x;
+      prev.y = pointer.y;
       const speed = Math.hypot(vx, vy);
-      const stretch = Math.min(2.6, 1 + speed * 0.0022);
-      const angle = Math.atan2(vy, vx);
 
-      // 向四面八方溅出粒子
-      emitAcc += dt;
-      if (visible && speed > 46 && emitAcc > 0.028) {
-        emitAcc = 0;
-        const count = speed > 420 ? 2 : 1;
+      if (visible) {
+        const lastPoint = trail[trail.length - 1];
+        if (!lastPoint || Math.hypot(pointer.x - lastPoint.x, pointer.y - lastPoint.y) > 2.4) {
+          trail.push({ x: pointer.x, y: pointer.y, born: now });
+        }
+      }
+
+      const cutoff = now - 160;
+      while (trail.length > 0 && trail[0].born < cutoff) trail.shift();
+      if (trail.length > 18) trail.splice(0, trail.length - 18);
+
+      if (held && visible && speed > 40 && now - lastEmit > 24) {
+        lastEmit = now;
+        const inv = speed || 1;
+        const nx = -vy / inv;
+        const ny = vx / inv;
+        const count = speed > 680 ? 3 : 2;
         for (let i = 0; i < count; i += 1) {
-          const a = Math.random() * Math.PI * 2;
-          const s = 26 + Math.random() * 80;
-          const life = 0.5 + Math.random() * 0.45;
-          parts.push({
-            x: pos.x,
-            y: pos.y,
-            vx: Math.cos(a) * s,
-            vy: Math.sin(a) * s,
+          const side = i % 2 === 0 ? 1 : -1;
+          const burst = 90 + Math.random() * 160;
+          const life = 0.3;
+          shards.push({
+            x: pointer.x + nx * side * 3,
+            y: pointer.y + ny * side * 3,
+            vx: nx * side * burst + vx * 0.03,
+            vy: ny * side * burst * 0.72 + vy * 0.02,
+            rot: Math.atan2(ny * side, nx * side) + (Math.random() - 0.5),
+            vr: (Math.random() - 0.5) * 8,
             life,
             max: life,
-            r: 0.8 + Math.random() * 1.4,
+            size: 3.4 + Math.random() * 5.2,
+            color: SHARD_COLORS[(Math.random() * SHARD_COLORS.length) | 0],
           });
         }
+        if (shards.length > 96) shards.splice(0, shards.length - 96);
       }
 
       ctx.clearRect(0, 0, w, h);
 
-      for (let i = parts.length - 1; i >= 0; i -= 1) {
-        const p = parts[i];
-        p.life -= dt;
-        if (p.life <= 0) {
-          parts.splice(i, 1);
+      for (let i = shards.length - 1; i >= 0; i -= 1) {
+        const shard = shards[i];
+        shard.life -= dt;
+        if (shard.life <= 0) {
+          shards.splice(i, 1);
           continue;
         }
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vx *= 0.93;
-        p.vy *= 0.93;
-        const t = p.life / p.max;
-        ctx.globalAlpha = t * 0.45;
-        ctx.fillStyle = "#5467e8";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * (0.35 + t * 0.65), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      if (visible) {
+        shard.x += shard.vx * dt;
+        shard.y += shard.vy * dt;
+        shard.vx *= 0.955;
+        shard.vy *= 0.955;
+        shard.rot += shard.vr * dt;
+        const t = shard.life / shard.max;
         ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        ctx.fillStyle = "rgba(84, 103, 232, 0.5)";
+        ctx.translate(shard.x, shard.y);
+        ctx.rotate(shard.rot);
+        ctx.globalAlpha = Math.max(0, t);
+        ctx.fillStyle = shard.color;
         ctx.beginPath();
-        ctx.ellipse(0, 0, 5.4 * stretch, 5.4 / Math.sqrt(stretch), 0, 0, Math.PI * 2);
+        ctx.moveTo(shard.size, 0);
+        ctx.lineTo(-shard.size * 0.62, shard.size * 0.46);
+        ctx.lineTo(-shard.size * 0.28, -shard.size * 0.5);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
 
+      if (visible && trail.length > 1) {
+        const fade = Math.min(1, trail.length / 5);
+        strokeTrail(-1.7, 0.2, "#39d7cc", 1.05, 0.8 * fade);
+        strokeTrail(1.5, 0.7, "#f5358d", 0.85, 0.42 * fade);
+        strokeTrail(0, 0, "#402347", 1.35, 0.92 * fade);
+      }
+
+      ctx.globalAlpha = 1;
       raf = requestAnimationFrame(frame);
     };
 
     raf = requestAnimationFrame(frame);
     window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
     window.addEventListener("pointerleave", onLeave);
+    window.addEventListener("blur", release);
     window.addEventListener("resize", resize);
 
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
       window.removeEventListener("pointerleave", onLeave);
+      window.removeEventListener("blur", release);
       window.removeEventListener("resize", resize);
     };
   }, []);

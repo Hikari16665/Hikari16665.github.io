@@ -1,4 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#ffffff" />
-  <path d="M32 12l3.6 16.4L52 32l-16.4 3.6L32 52l-3.6-16.4L12 32l16.4-3.6z" fill="#5467e8" />
+  <rect width="64" height="64" fill="#faf6ef" />
+  <circle cx="35.5" cy="35" r="16" fill="none" stroke="#f5358d" stroke-width="2" />
+  <circle cx="28.5" cy="29" r="16" fill="none" stroke="#25dbc9" stroke-width="2" />
+  <g clip-path="url(#planet)">
+    <circle cx="32" cy="32" r="15" fill="#402347" />
+    <path d="M6 27.5h52" stroke="#77389e" stroke-width="7" />
+    <path d="M6 35.5h52" stroke="#ae56cc" stroke-width="5" />
+    <path d="M8 43h48" stroke="#ef538f" stroke-width="3.5" />
+    <path d="M38 16.5 30.5 31.5h5.2L28 49.5 45.5 29.2h-6.2Z" fill="#faf6ef" />
+  </g>
+  <ellipse cx="36" cy="36" rx="24" ry="8" fill="none" stroke="#402347" stroke-width="1" transform="rotate(-28 36 36)" />
+  <ellipse cx="37.5" cy="37.2" rx="24" ry="8" fill="none" stroke="#25dbc9" stroke-width="0.8" transform="rotate(-28 37.5 37.2)" />
+  <path d="M50 8.5 51.3 12.4 55.2 13.7 51.3 15 50 18.9 48.7 15 44.8 13.7 48.7 12.4Z" fill="#f5358d" />
+  <defs>
+    <clipPath id="planet">
+      <circle cx="32" cy="32" r="15" />
+    </clipPath>
+  </defs>
 </svg>

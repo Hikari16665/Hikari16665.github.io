@@ -19,7 +19,7 @@ export default function ContactPage() {
 
           <a
             href={`mailto:${profile.email}`}
-            className="press rise mt-[clamp(20px,3.6vh,40px)] inline-block border-b border-ink/20 pb-[0.08em] font-display text-[clamp(22px,3.6vw,46px)] leading-[1.1] transition-colors hover:border-accent hover:text-accent max-[780px]:text-[clamp(20px,6.4vw,32px)]"
+            className="press print-title rise mt-[clamp(20px,3.6vh,40px)] inline-block text-[clamp(22px,3.4vw,44px)] leading-[1.05] max-[780px]:text-[clamp(20px,6.2vw,32px)]"
             style={{ animationDelay: "100ms" }}
           >
             {profile.email}
@@ -32,8 +32,8 @@ export default function ContactPage() {
             <CopyButton value={profile.email} label="复制邮箱" doneLabel="已复制" />
             <span className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-muted">
               <span className="relative flex size-[5px]">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent/50" />
-                <span className="relative inline-flex size-[5px] rounded-full bg-accent" />
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-berry/40" />
+                <span className="relative inline-flex size-[5px] rounded-full bg-berry" />
               </span>
               随时可以聊：开服 / 插件 / 别的
             </span>
@@ -56,7 +56,7 @@ export default function ContactPage() {
         </aside>
 
         <dl
-          className="rise col-span-12 mt-[clamp(34px,6vh,64px)] grid max-w-[900px] grid-cols-3 gap-[clamp(18px,3vw,44px)] border-t border-rule pt-[clamp(18px,2.6vh,26px)] max-[780px]:grid-cols-1 max-[780px]:gap-4"
+          className="band-top rise col-span-12 mt-[clamp(34px,6vh,64px)] grid max-w-[900px] grid-cols-3 gap-[clamp(18px,3vw,44px)] pt-[clamp(20px,3vh,30px)] max-[780px]:grid-cols-1 max-[780px]:gap-4"
           style={{ animationDelay: "240ms" }}
         >
           <div>

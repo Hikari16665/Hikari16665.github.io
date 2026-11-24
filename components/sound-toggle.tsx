@@ -16,9 +16,7 @@ export function SoundToggle() {
       type="button"
       onClick={() => void toggleSound()}
       aria-pressed={playing}
-      className={`ml-[clamp(4px,1vw,12px)] inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] transition-colors hover:text-accent ${
-        playing ? "text-accent" : "text-muted"
-      }`}
+      className="sound-toggle ml-[clamp(4px,1vw,12px)] inline-flex items-center gap-1.5 text-[10px] text-muted"
     >
       <span aria-hidden className={playing ? "animate-pulse" : ""}>
         ♪

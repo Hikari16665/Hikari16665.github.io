@@ -3,7 +3,20 @@
 import { useMemo, useState, type CSSProperties } from "react";
 
 import { categories, projects, type Category } from "@/lib/data";
-import { PatternArt } from "@/components/pattern";
+import { PatternArt, type PatternVariant } from "@/components/pattern";
+import { Spark } from "@/components/spark";
+
+/** 封面渐变按图案落到墨色轨道色板。lib/data.ts 里的原文不改。 */
+const covers: Record<PatternVariant, { from: string; to: string }> = {
+  arcs: { from: "#fffcf9", to: "#f6d5e6" },
+  stack: { from: "#241028", to: "#62345c" },
+  route: { from: "#fffcf9", to: "#f6d4e6" },
+  wave: { from: "#faf6ef", to: "#d5f3ee" },
+  blocks: { from: "#1c1024", to: "#4e2858" },
+  chunks: { from: "#fffaf6", to: "#f0e0e8" },
+  orbit: { from: "#2a1230", to: "#7a3160" },
+  stars: { from: "#fbf7f2", to: "#eadcf4" },
+};
 
 type Filter = "all" | Category;
 
@@ -31,17 +44,13 @@ export function WorkSection() {
         >
           {categories.map((cat, i) => (
             <div key={cat.id} className="flex items-center gap-x-[clamp(10px,1.4vw,18px)] max-[780px]:gap-x-3">
-              {i > 0 && (
-                <span aria-hidden className="text-[7px] leading-none text-accent">
-                  ◆
-                </span>
-              )}
+              {i > 0 && <Spark className="size-[7px] text-hot" />}
               <button
                 type="button"
                 onClick={() => setFilter(cat.id)}
                 aria-pressed={filter === cat.id}
-                className={`font-display text-[clamp(13px,1.5vw,19px)] uppercase leading-none tracking-[0.2em] transition-colors hover:text-accent ${
-                  filter === cat.id ? "text-accent" : "text-ink"
+                className={`filter-btn font-display text-[clamp(13px,1.5vw,18px)] leading-none ${
+                  filter === cat.id ? "" : "text-ink"
                 }`}
               >
                 {cat.label}
@@ -62,13 +71,12 @@ export function WorkSection() {
       >
         {visible.map((project, index) => {
           const isWide = index === 0;
-          const metaColor =
-            project.cover.tone === "dark" ? "rgba(255,255,255,0.62)" : "rgba(11,11,13,0.45)";
-          const patternColor = project.cover.tone === "dark" ? "text-white/60" : "text-accent/55";
+          const cover = covers[project.cover.pattern];
+          const metaClass = project.cover.tone === "dark" ? "poster-meta is-light" : "poster-meta";
 
           const style = {
-            "--c1": project.cover.from,
-            "--c2": project.cover.to,
+            "--c1": cover.from,
+            "--c2": cover.to,
           } as CSSProperties;
 
           return (
@@ -85,28 +93,27 @@ export function WorkSection() {
                 className="card-link group block text-inherit no-underline"
               >
                 <div
-                  className={`poster border border-ink/[0.06] ${
+                  className={`poster ${
                     isWide ? "aspect-[16/5.6] max-[780px]:aspect-[4/3]" : "aspect-[4/3]"
                   }`}
+                  data-tone={project.cover.tone}
                   style={style}
                 >
-                  <PatternArt variant={project.cover.pattern} className={patternColor} />
+                  <PatternArt variant={project.cover.pattern} />
                   <span
-                    className="absolute right-4 top-3 z-[3] text-[10px] tracking-[0.22em]"
-                    style={{ color: metaColor }}
+                    className={`absolute right-4 top-3.5 z-[5] font-display text-[10px] font-medium tracking-[0.22em] ${metaClass}`}
                   >
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span
-                    className="absolute bottom-3 right-4 z-[3] text-[9.5px] uppercase tracking-[0.16em]"
-                    style={{ color: metaColor }}
+                    className={`absolute bottom-3 right-4 z-[5] text-[9.5px] uppercase tracking-[0.16em] ${metaClass}`}
                   >
                     {project.cover.tag}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-1 pt-2.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                  <h3 className="font-display text-[clamp(15px,1.35vw,18px)] leading-snug transition-colors group-hover:text-accent">
+                  <h3 className="font-display text-[clamp(15px,1.35vw,18px)] leading-snug">
                     {project.name}
                   </h3>
                   <p className="text-[10.5px] uppercase tracking-[0.14em] text-muted sm:whitespace-nowrap">
@@ -116,7 +123,7 @@ export function WorkSection() {
 
                 <p className="mt-1 max-w-[46ch] text-[11px] leading-[1.6] text-muted">
                   {project.summary}
-                  <span className="ml-1.5 text-accent" aria-label={`${project.stars} 颗星`}>
+                  <span className="ml-1.5 text-berry" aria-label={`${project.stars} 颗星`}>
                     ★ {project.stars}
                   </span>
                 </p>
