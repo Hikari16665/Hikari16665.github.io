@@ -4,8 +4,8 @@ import type { CoverId } from "@/lib/data";
 
 /**
  * 作品封面：同一套印刷语言里的示意图。
- * 每张都在讲那一个仓库实际在做的事——启动器、寻路、歌词层、
- * 共用库、强加载区块、联合封禁、这个站自己——而不是可互换的抽象底纹。
+ * 每张都在讲那一个仓库实际在做的事——启动器、YAML 翻译、进程卡片、
+ * 寻路、歌词层、共用库、强加载区块、联合封禁、这个站自己。
  * 共同的部分：纸底、套印错位、窗口饰条、站点和一条线。
  */
 
@@ -454,8 +454,94 @@ function Site() {
   );
 }
 
+/** 左右各一份 YAML，中间翻译过去；两边都留着同一枚 {0}。 */
+function Token({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <rect x={x + 2.2} y={y + 1.4} width={32} height={14} rx={2} fill="none" stroke={PINK} strokeWidth={1.15} />
+      <rect x={x - 2.2} y={y - 1.2} width={32} height={14} rx={2} fill="none" stroke={CYAN} strokeWidth={1.15} />
+      <rect x={x} y={y} width={32} height={14} rx={2} fill={PAPER} stroke={BERRY} strokeWidth={1.4} />
+      <text
+        x={x + 16}
+        y={y + 11}
+        textAnchor="middle"
+        fill={PLUM}
+        fontFamily="var(--font-display), sans-serif"
+        fontSize="10"
+        fontWeight="700"
+      >
+        {"{0}"}
+      </text>
+    </g>
+  );
+}
+
+function Yaml() {
+  const source = [
+    { x: 40, y: 52, w: 86 },
+    { x: 54, y: 74, w: 28 },
+    { x: 68, y: 96, w: 64 },
+    { x: 54, y: 116, w: 48 },
+  ];
+  const translated = [
+    { x: 268, y: 50, w: 108 },
+    { x: 282, y: 72, w: 22 },
+    { x: 296, y: 94, w: 52 },
+    { x: 282, y: 114, w: 70 },
+  ];
+  return (
+    <Frame>
+      <rect x={30} y={30} width={156} height={106} fill="none" stroke={PINK} strokeWidth={1.15} transform="translate(2.2 1.4)" />
+      <rect x={26} y={26} width={156} height={106} fill="none" stroke={CYAN} strokeWidth={1.15} transform="translate(-2 -1.2)" />
+      <rect x={28} y={28} width={156} height={106} fill={PAPER} stroke={PLUM} strokeWidth={1.5} />
+      <path d="M 148 28 h 36 v 14 h -14 z" fill={PLUM} />
+      {source.map((row) => (
+        <path key={`s-${row.y}`} d={`M ${row.x} ${row.y} h ${row.w}`} stroke={PLUM} strokeWidth={3} strokeLinecap="square" />
+      ))}
+      <Token x={90} y={66} />
+      <Echo d="M 196 80 H 236" width={2} />
+      <circle cx={196} cy={80} r={4} fill={BERRY} />
+      <path d="M 228 74 l 10 6 l -10 6" fill="none" stroke={PLUM} strokeWidth={1.6} />
+      <Window x={248} y={20} w={168} h={118} bar={16}>
+        {translated.map((row) => (
+          <path key={`t-${row.y}`} d={`M ${row.x} ${row.y} h ${row.w}`} stroke={PLUM} strokeWidth={3} strokeLinecap="square" opacity={0.85} />
+        ))}
+        <Token x={312} y={64} />
+      </Window>
+    </Frame>
+  );
+}
+
+/** 桌面右下角两张卡片：青的是进程起来，浆果色的是退出。 */
+function Proc() {
+  return (
+    <Frame>
+      <Window x={22} y={16} w={396} h={124} bar={16}>
+        <path d="M 36 124 H 400" stroke={PLUM} strokeOpacity={0.18} strokeWidth={1.2} />
+        <line x1={268} y1={58} x2={268} y2={102} stroke={PLUM} strokeWidth={1.4} />
+        <g>
+          <rect x={286} y={86} width={112} height={26} rx={4} fill={PINK} fillOpacity={0.22} />
+          <rect x={284} y={84} width={112} height={26} rx={4} fill={PAPER} stroke={BERRY} strokeWidth={1.5} />
+          <circle cx={268} cy={97} r={4} fill={BERRY} stroke={PLUM} strokeWidth={1.1} />
+          <path d="M 298 97 h 62" stroke={PLUM} strokeOpacity={0.45} strokeWidth={2.4} strokeLinecap="square" />
+        </g>
+        <g>
+          <rect x={252} y={40} width={142} height={38} rx={8} fill={CYAN} fillOpacity={0.28} />
+          <rect x={260} y={46} width={132} height={30} rx={4} fill="none" stroke={PINK} strokeWidth={1.2} transform="translate(2 1.2)" />
+          <rect x={256} y={44} width={132} height={30} rx={4} fill="none" stroke={CYAN} strokeWidth={1.2} transform="translate(-2 -1)" />
+          <rect x={258} y={45} width={132} height={30} rx={4} fill={PAPER} stroke={PLUM} strokeWidth={1.5} />
+          <circle cx={268} cy={60} r={4.4} fill={CYAN} stroke={PLUM} strokeWidth={1.1} />
+          <path d="M 280 60 h 78" stroke={PLUM} strokeWidth={2.6} strokeLinecap="square" />
+        </g>
+      </Window>
+    </Frame>
+  );
+}
+
 const drawings: Record<CoverId, () => ReactNode> = {
   launcher: Launcher,
+  yaml: Yaml,
+  proc: Proc,
   baritone: Baritone,
   lyrics: Lyrics,
   library: Library,
