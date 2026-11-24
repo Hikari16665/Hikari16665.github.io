@@ -13,7 +13,7 @@ export default function NotFound() {
         >
           Nothing
         </h1>
-        <p className="rise mt-6 text-[15px] leading-[1.78] text-[#17171b]" style={{ animationDelay: "120ms" }}>
+        <p className="rise mt-6 text-[15px] leading-[1.78] text-ink" style={{ animationDelay: "120ms" }}>
           这个地址没有内容。也许是我还没写，也许是链接旧了。
         </p>
         <p className="rise mt-6 text-[15px]" style={{ animationDelay: "160ms" }}>

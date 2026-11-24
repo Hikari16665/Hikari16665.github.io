@@ -33,11 +33,8 @@ export function CopyButton({ value, label = "复制主页", doneLabel = "已复�
     <button
       type="button"
       onClick={handleCopy}
-      className={`press inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[10px] uppercase tracking-[0.2em] transition-colors ${
-        done
-          ? "border-accent bg-accent/5 text-accent"
-          : "border-ink/20 text-ink hover:border-accent hover:text-accent"
-      }`}
+      data-done={done}
+      className="chip"
     >
       {done ? doneLabel : label}
     </button>

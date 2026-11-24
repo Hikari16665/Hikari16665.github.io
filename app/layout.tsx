@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Roboto } from "next/font/google";
+import { Archivo, Roboto } from "next/font/google";
 import Script from "next/script";
 
 import "./globals.css";
 import { Backdrop } from "@/components/backdrop";
-import { CursorAura } from "@/components/cursor-aura";
 import { CursorBlob } from "@/components/cursor-blob";
 import { IntroOverlay } from "@/components/intro-overlay";
 import { RouteReset } from "@/components/route-reset";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
-const playfair = Playfair_Display({
+const display = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-playfair",
+  weight: ["500", "700", "800"],
+  style: ["normal", "italic"],
+  variable: "--font-display-face",
   display: "swap",
 });
 
@@ -50,7 +50,7 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       suppressHydrationWarning
-      className={`${playfair.variable} ${roboto.variable}`}
+      className={`${display.variable} ${roboto.variable}`}
     >
       <body className="flex h-dvh flex-col justify-center overflow-hidden bg-paper text-ink antialiased">
         {/* 在首帧之前决定：是放开场，还是直接进站 */}
@@ -62,7 +62,6 @@ export default function RootLayout({
         </noscript>
 
         <Backdrop />
-        <CursorAura />
         <CursorBlob />
         <RouteReset />
 

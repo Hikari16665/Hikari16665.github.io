@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CSSProperties } from "react";
 
+import { Spark } from "@/components/spark";
+
 const items = [
   { href: "/", label: "首页" },
   { href: "/about", label: "关于" },
@@ -19,13 +21,11 @@ export function SiteHeader() {
       <Link
         href="/"
         aria-label="Nyankolunii —— 返回首页"
-        className="rise inline-flex items-start gap-[0.16em] font-display text-[clamp(19px,1.7vw,25px)] leading-none tracking-[0.02em] text-ink transition-colors hover:text-accent"
+        className="rise inline-flex items-start gap-[0.14em] whitespace-nowrap text-[clamp(18px,1.6vw,24px)] leading-none"
         style={{ "--d": "0ms" } as CSSProperties}
       >
-        Nyankolunii
-        <span aria-hidden className="mt-[0.1em] text-[0.42em] leading-none text-accent">
-          ✦
-        </span>
+        <span className="print-title">Nyankolunii</span>
+        <Spark className="mt-[0.16em] size-[0.42em] shrink-0 text-hot" />
       </Link>
 
       <nav
@@ -42,9 +42,7 @@ export function SiteHeader() {
               href={item.href}
               data-active={active}
               aria-current={active ? "page" : undefined}
-              className={`nav-link press rise transition-colors hover:text-accent ${
-                active ? "text-accent" : "text-ink"
-              }`}
+              className={`nav-link press rise ${active ? "" : "text-ink"}`}
               style={{ "--d": `${80 + index * 30}ms` } as CSSProperties}
             >
               {item.label}

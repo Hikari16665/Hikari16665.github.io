@@ -28,7 +28,7 @@ export function LocalClock({ timeZone }: { timeZone: string }) {
 
   // 服务端先渲染占位，避免时区造成的水合不一致
   return (
-    <p className="mt-2 font-display text-[clamp(32px,3.4vw,46px)] leading-none tracking-[0.02em] [font-variant-numeric:tabular-nums]">
+    <p className="print-soft mt-2 text-[clamp(32px,3.4vw,46px)] leading-none [font-variant-numeric:tabular-nums]">
       {time ?? "--:--"}
     </p>
   );

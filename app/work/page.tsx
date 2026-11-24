@@ -16,7 +16,7 @@ export default function WorkPage() {
         <WorkSection />
       </div>
 
-      <p className="mt-[clamp(20px,4vh,36px)] border-t border-rule pt-5 text-[11px] leading-[1.7] tracking-[0.02em] text-muted">
+      <p className="band-top mt-[clamp(20px,4vh,36px)] pt-5 text-[11px] leading-[1.7] tracking-[0.02em] text-muted">
         这里放了 {projects.length} 件能拿出来看的，全部 {profile.repos} 个仓库在{" "}
         <a
           href={profile.github}
