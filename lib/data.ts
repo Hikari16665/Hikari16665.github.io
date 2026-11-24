@@ -1,5 +1,3 @@
-import type { PatternVariant } from "@/components/pattern";
-
 /**
  * 站点内容全部来自公开信息：
  * GitHub 用户 @Hikari16665（https://github.com/Hikari16665）
@@ -27,6 +25,16 @@ export const profile = {
 
 export type Category = "plugin" | "app" | "experiment";
 
+/** 封面图的种类。每一种对应一张和项目本身有关的印刷示意图。 */
+export type CoverId =
+  | "launcher"
+  | "baritone"
+  | "lyrics"
+  | "library"
+  | "forceload"
+  | "union"
+  | "site";
+
 export type Project = {
   name: string;
   year: string;
@@ -36,11 +44,7 @@ export type Project = {
   stars: number;
   href: string;
   cover: {
-    from: string;
-    to: string;
-    tone: "light" | "dark";
-    /** 封面上的印象图案 */
-    pattern: PatternVariant;
+    id: CoverId;
     tag: string;
   };
 };
@@ -54,13 +58,7 @@ export const projects: Project[] = [
     stack: "Python + Tauri + React",
     stars: 10,
     href: "https://github.com/Hikari16665/HikariServerLauncher2",
-    cover: {
-      from: "#0d1424",
-      to: "#33416b",
-      tone: "dark",
-      pattern: "stack",
-      tag: "app/tools",
-    },
+    cover: { id: "launcher", tag: "app/tools" },
   },
   {
     name: "CarpetBaritoneIntegration",
@@ -70,13 +68,7 @@ export const projects: Project[] = [
     stack: "Java",
     stars: 9,
     href: "https://github.com/Hikari16665/CarpetBaritoneIntegration",
-    cover: {
-      from: "#e9ecfd",
-      to: "#aab6f2",
-      tone: "light",
-      pattern: "route",
-      tag: "mod/fabric",
-    },
+    cover: { id: "baritone", tag: "mod/fabric" },
   },
   {
     name: "dsh-netease-lyrics",
@@ -86,13 +78,7 @@ export const projects: Project[] = [
     stack: "JavaScript · MIT",
     stars: 3,
     href: "https://github.com/Hikari16665/dsh-netease-lyrics",
-    cover: {
-      from: "#f2f4fd",
-      to: "#cbd3f5",
-      tone: "light",
-      pattern: "wave",
-      tag: "app/dsh",
-    },
+    cover: { id: "lyrics", tag: "app/dsh" },
   },
   {
     name: "HikariLib",
@@ -102,13 +88,7 @@ export const projects: Project[] = [
     stack: "Java",
     stars: 5,
     href: "https://github.com/Hikari16665/HikariLib",
-    cover: {
-      from: "#11182a",
-      to: "#3a4468",
-      tone: "dark",
-      pattern: "blocks",
-      tag: "library",
-    },
+    cover: { id: "library", tag: "library" },
   },
   {
     name: "ValuableForceload",
@@ -118,13 +98,7 @@ export const projects: Project[] = [
     stack: "Java",
     stars: 2,
     href: "https://github.com/Hikari16665/ValuableForceload",
-    cover: {
-      from: "#f7f8fc",
-      to: "#bdc6e9",
-      tone: "light",
-      pattern: "chunks",
-      tag: "plugin/bukkit",
-    },
+    cover: { id: "forceload", tag: "plugin/bukkit" },
   },
   {
     name: "UnionBan",
@@ -134,13 +108,7 @@ export const projects: Project[] = [
     stack: "TypeScript · Python",
     stars: 2,
     href: "https://github.com/Hikari16665/UnionBan-Frontend",
-    cover: {
-      from: "#141b2c",
-      to: "#2f3d61",
-      tone: "dark",
-      pattern: "orbit",
-      tag: "app/web",
-    },
+    cover: { id: "union", tag: "app/web" },
   },
   {
     name: "Hikari16665.github.io",
@@ -150,13 +118,7 @@ export const projects: Project[] = [
     stack: "Astro",
     stars: 1,
     href: "https://github.com/Hikari16665/Hikari16665.github.io",
-    cover: {
-      from: "#eef1ff",
-      to: "#cdd5f6",
-      tone: "light",
-      pattern: "stars",
-      tag: "life/blog",
-    },
+    cover: { id: "site", tag: "life/blog" },
   },
 ];
 

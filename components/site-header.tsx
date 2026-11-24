@@ -17,7 +17,7 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="relative z-10 mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-[var(--page-pad)] pb-[clamp(6px,1.2vh,14px)] pt-[clamp(16px,2.6vh,28px)]">
+    <header className="relative z-10 mx-auto flex w-full max-w-[1500px] shrink-0 items-center justify-between gap-4 px-[var(--page-pad)] pb-[clamp(6px,1.2vh,14px)] pt-[clamp(16px,2.6vh,28px)]">
       <Link
         href="/"
         aria-label="Nyankolunii —— 返回首页"
