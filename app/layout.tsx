@@ -68,7 +68,7 @@ export default function RootLayout({
         <IntroOverlay />
 
         <SiteHeader />
-        <main className="relative z-[2] h-[72vh] min-h-0 shrink-0">{children}</main>
+        <main className="relative z-[2] min-h-0 flex-1">{children}</main>
         <SiteFooter />
       </body>
     </html>

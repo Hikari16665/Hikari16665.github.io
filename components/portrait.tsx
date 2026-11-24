@@ -4,7 +4,7 @@ import { Spark } from "@/components/spark";
 
 export function Portrait() {
   return (
-    <figure className="m-0 w-full max-w-[min(420px,46vh)] justify-self-end max-[1000px]:max-w-[min(340px,40vh)] max-[780px]:max-w-[340px] max-[780px]:justify-self-start">
+    <figure className="portrait m-0 w-full max-w-[340px]">
       <div className="portrait-frame relative aspect-[4/5] overflow-hidden">
         <Image
           src="/avatar.jpg"

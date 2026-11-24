@@ -5,7 +5,7 @@ import { profile } from "@/lib/data";
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer relative z-10 mx-auto flex w-full max-w-[1500px] items-end justify-between gap-6 px-[var(--page-pad)] pb-[clamp(16px,2.6vh,26px)] pt-[clamp(12px,1.8vh,20px)] max-[780px]:flex-col-reverse max-[780px]:items-start max-[780px]:gap-3.5">
+    <footer className="site-footer relative z-10 mx-auto flex w-full max-w-[1500px] shrink-0 items-end justify-between gap-6 px-[var(--page-pad)] pb-[clamp(16px,2.6vh,26px)] pt-[clamp(12px,1.8vh,20px)] max-[780px]:flex-col-reverse max-[780px]:items-start max-[780px]:gap-3.5">
       <p
         className="rise text-[11px] leading-[1.45] tracking-[0.02em] text-muted"
         style={{ "--d": "760ms" } as CSSProperties}
